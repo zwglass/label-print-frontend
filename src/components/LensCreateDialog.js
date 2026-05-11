@@ -4,6 +4,40 @@ import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 
 const refractiveOptions = ["1.553", "1.56", "1.60", "1.67", "1.74"];
+const lensCreateStorageKeys = {
+  coatingStatus: "labelPrintLensCreateCoatingStatus",
+  design: "labelPrintLensCreateDesign",
+  origin: "labelPrintLensCreateOrigin",
+  filmColor: "labelPrintLensCreateFilmColor",
+};
+
+const trimValue = (value) => String(value ?? "").trim();
+
+function loadStoredLensCreateValues() {
+  if (typeof window === "undefined") {
+    return {
+      coatingStatus: "",
+      design: "",
+      origin: "",
+      filmColor: "",
+    };
+  }
+
+  return Object.fromEntries(
+    Object.entries(lensCreateStorageKeys).map(([field, key]) => [
+      field,
+      trimValue(window.localStorage.getItem(key)),
+    ]),
+  );
+}
+
+function saveStoredLensCreateValues(values) {
+  if (typeof window === "undefined") return;
+
+  Object.entries(lensCreateStorageKeys).forEach(([field, key]) => {
+    window.localStorage.setItem(key, trimValue(values[field]));
+  });
+}
 
 export default function LensCreateDialog({ open, onCancel, onConfirm }) {
   const { t, language } = useI18n();
@@ -16,20 +50,25 @@ export default function LensCreateDialog({ open, onCancel, onConfirm }) {
     abbe: "37",
     diameter: "72",
     goodsName: defaultGoodsName,
+    coatingStatus: "",
+    design: "",
+    origin: "",
+    filmColor: "",
   });
 
   useEffect(() => {
     if (!open) return;
     setForm((current) => {
+      const storedValues = loadStoredLensCreateValues();
       if (
         current.goodsName &&
         current.goodsName !== "1.56超薄树脂防蓝光" &&
         current.goodsName !== "1.56 Ultra-thin Blue Light Blocking Resin Lens"
       ) {
-        return current;
+        return { ...current, ...storedValues };
       }
 
-      return { ...current, goodsName: defaultGoodsName };
+      return { ...current, ...storedValues, goodsName: defaultGoodsName };
     });
   }, [defaultGoodsName, open]);
 
@@ -41,7 +80,15 @@ export default function LensCreateDialog({ open, onCancel, onConfirm }) {
 
   const submit = (event) => {
     event.preventDefault();
-    onConfirm(form);
+    const cleanedForm = {
+      ...form,
+      coatingStatus: trimValue(form.coatingStatus),
+      design: trimValue(form.design),
+      origin: trimValue(form.origin),
+      filmColor: trimValue(form.filmColor),
+    };
+    saveStoredLensCreateValues(cleanedForm);
+    onConfirm(cleanedForm);
   };
 
   return (
@@ -100,6 +147,46 @@ export default function LensCreateDialog({ open, onCancel, onConfirm }) {
               className="input input-bordered"
               value={form.goodsName}
               onChange={(event) => update({ goodsName: event.target.value })}
+            />
+          </label>
+
+          <label className="lens-create-row wide">
+            <span>{t("coatingStatus")}</span>
+            <input
+              className="input input-bordered"
+              value={form.coatingStatus}
+              onChange={(event) => update({ coatingStatus: event.target.value })}
+              onBlur={(event) => update({ coatingStatus: trimValue(event.target.value) })}
+            />
+          </label>
+
+          <label className="lens-create-row wide">
+            <span>{t("design")}</span>
+            <input
+              className="input input-bordered"
+              value={form.design}
+              onChange={(event) => update({ design: event.target.value })}
+              onBlur={(event) => update({ design: trimValue(event.target.value) })}
+            />
+          </label>
+
+          <label className="lens-create-row wide">
+            <span>{t("origin")}</span>
+            <input
+              className="input input-bordered"
+              value={form.origin}
+              onChange={(event) => update({ origin: event.target.value })}
+              onBlur={(event) => update({ origin: trimValue(event.target.value) })}
+            />
+          </label>
+
+          <label className="lens-create-row wide">
+            <span>{t("filmColor")}</span>
+            <input
+              className="input input-bordered"
+              value={form.filmColor}
+              onChange={(event) => update({ filmColor: event.target.value })}
+              onBlur={(event) => update({ filmColor: trimValue(event.target.value) })}
             />
           </label>
         </div>

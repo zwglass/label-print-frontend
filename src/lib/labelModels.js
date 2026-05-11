@@ -146,7 +146,23 @@ export function createLensTexts(options = {}) {
   const refractiveIndex = options.refractiveIndex || "1.553";
   const abbe = options.abbe || "37";
   const diameter = options.diameter || "72";
+  const coatingStatus = String(options.coatingStatus ?? "").trim();
+  const design = String(options.design ?? "").trim();
+  const origin = String(options.origin ?? "").trim();
+  const filmColor = String(options.filmColor ?? "").trim();
   const dateText = new Date().toLocaleDateString(english ? "en-US" : "zh-CN");
+  const optionalSpecTexts = [
+    { label: english ? "Coating:" : "镀膜情况:", value: coatingStatus, labelWidth: 18, valueWidth: 20 },
+    { label: english ? "Color:" : "膜色:", value: filmColor, labelWidth: 12, valueWidth: 12 },
+    { label: english ? "Design:" : "设计:", value: design, labelWidth: 12, valueWidth: 14 },
+    { label: english ? "Origin:" : "产地:", value: origin, labelWidth: 12, valueWidth: 24 },
+  ].filter(({ value }) => value).flatMap(({ label, value, labelWidth, valueWidth }, index) => {
+    const y = 21 + index * 4;
+    return [
+      { value: label, x: 42, y, width: labelWidth, fontSize: 8, bold: false, rotate: 0 },
+      { value, x: 58, y, width: valueWidth, fontSize: 8, bold: false, rotate: 0 },
+    ];
+  });
   const texts = [
     { value: goodsName, x: 15, y: 5, width: 60, fontSize: 9, bold: true, rotate: 0 },
     { value: "S:-0.00", x: 9, y: 0, width: 15, fontSize: 10, bold: true, rotate: 0 },
@@ -173,16 +189,9 @@ export function createLensTexts(options = {}) {
     { value: english ? "Eyewear" : "眼镜类", x: 58, y: 9, width: 20, fontSize: 8, bold: false, rotate: 0 },
     { value: english ? "Use:" : "产品用途:", x: 42, y: 13, width: 18, fontSize: 8, bold: false, rotate: 0 },
     { value: english ? "Vision Correction" : "视力矫正用", x: 58, y: 13, width: 20, fontSize: 8, bold: false, rotate: 0 },
-    { value: english ? "Coating:" : "镀膜情况:", x: 42, y: 17, width: 18, fontSize: 8, bold: false, rotate: 0 },
-    { value: english ? "Multi-layer" : "多层复合膜", x: 58, y: 17, width: 20, fontSize: 8, bold: false, rotate: 0 },
-    { value: english ? "Color:" : "膜色:", x: 42, y: 21, width: 12, fontSize: 8, bold: false, rotate: 0 },
-    { value: english ? "Green" : "绿膜", x: 50, y: 21, width: 12, fontSize: 8, bold: false, rotate: 0 },
-    { value: english ? "Design:" : "设计:", x: 58, y: 21, width: 12, fontSize: 8, bold: false, rotate: 0 },
-    { value: english ? "Aspheric" : "非球面", x: 66, y: 21, width: 14, fontSize: 8, bold: false, rotate: 0 },
-    { value: english ? "Origin:" : "产地:", x: 42, y: 25, width: 12, fontSize: 8, bold: false, rotate: 0 },
-    { value: english ? "Danyang, China" : "中国 丹阳", x: 50, y: 25, width: 24, fontSize: 8, bold: false, rotate: 0 },
-    { value: english ? "Grade:" : "等级:", x: 42, y: 29, width: 12, fontSize: 8, bold: false, rotate: 0 },
-    { value: english ? "Qualified" : "合格", x: 50, y: 29, width: 16, fontSize: 8, bold: false, rotate: 0 },
+    { value: english ? "Grade:" : "等级:", x: 42, y: 17, width: 12, fontSize: 8, bold: false, rotate: 0 },
+    { value: english ? "Qualified" : "合格", x: 58, y: 17, width: 16, fontSize: 8, bold: false, rotate: 0 },
+    ...optionalSpecTexts,
   ];
 
   if (options.isMultiFocus) {

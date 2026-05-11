@@ -420,11 +420,11 @@ body {
 
 .lens-create-body {
   min-height: 540px;
-  padding: 50px 42px 56px;
+  padding: 28px 42px 32px;
   display: grid;
   justify-content: center;
   align-content: start;
-  gap: 38px;
+  gap: 14px;
 }
 
 .lens-create-row {

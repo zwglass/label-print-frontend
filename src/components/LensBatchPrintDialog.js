@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { createDiopterValues, lensPowerSigns, updateLensLabelPower } from "@/lib/labelModels";
 import { getReadyLodop, sendLabelToLodop } from "@/lib/lodopPrint";
 import { useI18n } from "@/lib/i18n";
@@ -13,6 +13,7 @@ export default function LensBatchPrintDialog({ open, label, printerIndex = 0, on
   const [signIndex, setSignIndex] = useState(0);
   const [quantities, setQuantities] = useState({});
   const [printing, setPrinting] = useState(false);
+  const quantityInputRefs = useRef({});
 
   const sphValues = useMemo(() => createDiopterValues(12), []);
   const cylValues = useMemo(() => createDiopterValues(maxCyl / 100), [maxCyl]);
@@ -33,6 +34,37 @@ export default function LensBatchPrintDialog({ open, label, printerIndex = 0, on
 
   const clearQuantities = () => {
     setQuantities({});
+  };
+
+  const focusQuantityInput = (rowIndex, colIndex) => {
+    quantityInputRefs.current[`${rowIndex}-${colIndex}`]?.focus();
+  };
+
+  const handleQuantityKeyDown = (rowIndex, colIndex, event) => {
+    const moves = {
+      ArrowUp: [-1, 0],
+      ArrowDown: [1, 0],
+      ArrowLeft: [0, -1],
+      ArrowRight: [0, 1],
+    };
+    const move = moves[event.key];
+
+    if (!move) return;
+
+    event.preventDefault();
+    const nextRowIndex = rowIndex + move[0];
+    const nextColIndex = colIndex + move[1];
+
+    if (
+      nextRowIndex < 0 ||
+      nextRowIndex >= sphValues.length ||
+      nextColIndex < 0 ||
+      nextColIndex >= cylValues.length
+    ) {
+      return;
+    }
+
+    focusQuantityInput(nextRowIndex, nextColIndex);
   };
 
   const createPrintJobs = () => {
@@ -140,12 +172,19 @@ export default function LensBatchPrintDialog({ open, label, printerIndex = 0, on
                 </tr>
               </thead>
               <tbody>
-                {sphValues.map((sph) => (
+                {sphValues.map((sph, rowIndex) => (
                   <tr key={sph}>
                     <th>{sph}</th>
-                    {cylValues.map((cyl) => (
+                    {cylValues.map((cyl, colIndex) => (
                       <td key={cyl}>
                         <input
+                          ref={(element) => {
+                            if (element) {
+                              quantityInputRefs.current[`${rowIndex}-${colIndex}`] = element;
+                            } else {
+                              delete quantityInputRefs.current[`${rowIndex}-${colIndex}`];
+                            }
+                          }}
                           className="input input-ghost validator"
                           type="number"
                           min="0"
@@ -155,6 +194,7 @@ export default function LensBatchPrintDialog({ open, label, printerIndex = 0, on
                           // placeholder="0-100"
                           value={quantities[sph]?.[cyl] ?? ""}
                           onChange={(event) => updateQuantity(sph, cyl, event.target.value)}
+                          onKeyDown={(event) => handleQuantityKeyDown(rowIndex, colIndex, event)}
                         />
                       </td>
                     ))}
