@@ -32,10 +32,9 @@ jobs:
 
       - name: Build
         env:
-          GITHUB_PAGES: true
           NEXT_PUBLIC_API_BASE_URL: https://labprintapis.cchw.net
           NEXT_PUBLIC_LODOP_DOWNLOAD_URL: https://cchw.net/install_lodop32.exe.zip
-          NEXT_PUBLIC_SITE_URL: https://你的GitHub用户名.github.io/label-print-frontend
+          NEXT_PUBLIC_SITE_URL: https://label.zwglass.net
         run: bun run build
 
       - name: Disable Jekyll
