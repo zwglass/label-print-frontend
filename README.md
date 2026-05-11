@@ -131,32 +131,10 @@ bunx serve out
 
 ## 部署
 
-执行构建：
+GitHub Pages
 
-```bash
-bun run build
-```
-
-然后运行：
-
-```bash
-./auto_deploy.sh
-```
-
-`auto_deploy.sh` 当前会把服务器上的：
-
-```text
-/deploy/label_print/frontend_customer/out
-```
-
-同步到：
-
-```text
-/www/label_zwglass_net
-```
 
 ## 注意事项
 
-- 旧 Next/Gatsby 源码已丢失，当前实现是按现有静态产物和截图重写，不包含旧项目中的全部接口逻辑。
 - 标签保存优先使用浏览器 `localStorage`，同时支持导出 JSON 文件。
 - 打印逻辑使用 `window.print()` 作为可靠基础；如果浏览器环境存在 `LODOP` 或 `CLODOP`，打印机下拉框会尝试读取打印机列表。
