@@ -1,4 +1,5 @@
 import "./globals.css";
+import Script from "next/script";
 import Providers from "./providers";
 import { organizationJsonLd, pageMetadata, pages, siteUrl } from "@/lib/seo";
 import JsonLd from "@/components/JsonLd";
@@ -36,6 +37,12 @@ export default function RootLayout({ children }) {
       <body>
         <JsonLd data={organizationJsonLd()} />
         <Providers>{children}</Providers>
+        <Script
+          defer
+          src="https://static.cloudflareinsights.com/beacon.min.js"
+          data-cf-beacon='{"token":"94ebda10c04140b283a2170130e4c4fe"}'
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   );
