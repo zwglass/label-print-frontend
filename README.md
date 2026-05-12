@@ -1,8 +1,92 @@
-# ZWGlass Label Print Frontend
+# ZWGlass Label Print
 
-`frontend_customer` 是 label_print 的前端项目，使用 Next.js 重写。当前源码基于旧站打包产物和首页截图恢复，目标是保持结构清晰、逻辑简单、可维护，并支持静态导出部署。
+Free online label printer, an open alternative to paid label design software.
 
-## 技术栈
+Live demo: https://label.zwglass.net
+
+ZWGlass Label Print is a browser-based label printing tool for small businesses, warehouses, optical shops, and teams that need barcode labels, QR code labels, and eyeglass lens labels without paid desktop software. It supports browser printing, JSON template export, and optional LODOP/C-Lodop local printer integration.
+
+中文：免费在线标签打印工具，平替收费标签打印软件。
+
+Keywords: free online label printer, online label printer, free label printing software, label design software alternative, barcode label printer, QR code label printer, browser-based label printing, printable label maker, custom label printer online, eyeglass lens label printer, optical shop label printing, lens label printing, LODOP web printing, C-Lodop browser printing, 免费标签打印, 在线标签打印, 标签打印软件平替
+
+## Screenshots
+
+![ZWGlass Label Print home](tmp_imgs/app_home.png)
+
+![Barcode editor](tmp_imgs/条形码编辑弹窗.png)
+
+![QR code editor](tmp_imgs/二维码编辑弹窗.png)
+
+![Lens label batch printing](tmp_imgs/镜片批量打印弹窗.png)
+
+## Use Cases
+
+- Small businesses: print product labels, price labels, shelf labels, and QR code labels.
+- Warehouses and ecommerce sellers: print inventory labels, barcode labels, package labels, and bin labels.
+- Optical shops and lens labs: print eyeglass lens labels and batch lens parameter labels.
+- Lightweight office workflows: create quick labels without installing complex paid label printing software.
+- Browser printing systems: use browser print preview by default, or connect to local printers through LODOP/C-Lodop.
+
+## Features
+
+- Free online label printing.
+- Common label editor: `/`
+- Eyeglass lens label editor: `/lens/`
+- Printing guide and LODOP setup page: `/contact/`
+- Editable label text, font size, bold style, rotation, and position.
+- Editable label width and height.
+- QR code and barcode label support.
+- Lens label creation, center thickness and diameter editing, and batch printing.
+- Browser local storage for label templates.
+- JSON template export for backup and migration.
+- Browser print preview and browser printing.
+- Optional LODOP/C-Lodop printer detection and direct local printing.
+- SEO/AEO/GEO foundation: metadata, structured data, `robots.txt`, `sitemap.xml`, and `llms.txt`.
+
+## How It Works
+
+Open the live demo:
+
+```text
+https://label.zwglass.net
+```
+
+Basic workflow:
+
+1. Create or select a label.
+2. Edit text, QR code, barcode, or lens parameters.
+3. Set the label size and print quantity.
+4. Use browser print preview, or install LODOP/C-Lodop to select a local printer.
+5. Save the template locally and export JSON for backup.
+
+## FAQ
+
+### Is ZWGlass Label Print free?
+
+Yes. ZWGlass Label Print is a free online label printer and a lightweight alternative to paid label design software.
+
+### Can it replace paid label printing software?
+
+It can cover lightweight label printing workflows such as product labels, barcode labels, QR code labels, inventory labels, and eyeglass lens labels. Enterprise workflows such as centralized approvals, permission management, and advanced template governance may require additional backend integration.
+
+### Do I need to install LODOP/C-Lodop?
+
+No. Browser printing and print preview work without plugins. LODOP/C-Lodop is optional and is useful when a web page needs to read local printers and send direct print jobs.
+
+### Where are label templates stored?
+
+Templates are saved in browser `localStorage` by default. You can also export JSON files to back up templates or move them to another browser or computer.
+
+### Does it support eyeglass lens label batch printing?
+
+Yes. The `/lens/` page can create eyeglass lens labels, edit lens parameters, center thickness, and diameter, and batch print multiple lens label combinations.
+
+## Chinese Summary
+
+ZWGlass Label Print 的宗旨是“免费标签打印，平替收费标签打印软件”。它支持通用标签、二维码标签、条形码标签、眼镜片标签、浏览器打印和 LODOP/C-Lodop 本地打印机集成。
+
+## Tech Stack
 
 - Next.js 14
 - React 18
@@ -10,70 +94,57 @@
 - Tailwind CSS 4
 - daisyUI 5
 
-## 功能
-
-- 通用标签页面：`/`
-- 镜片标签页面：`/lens/`
-- 使用说明页面：`/contact/`
-- 标签文本新增、编辑、删除
-- 标签尺寸编辑
-- 二维码/条形码占位显示
-- 标签 JSON 导入/导出
-- 浏览器本地保存
-- 浏览器打印预览/打印
-- 尝试读取 LODOP/CLODOP 打印机；未检测到时使用浏览器默认打印机
-
-## 目录结构
+## Project Structure
 
 ```text
 .
-├── auto_deploy.sh          # 服务器部署脚本，部署 out 静态目录
-├── next.config.js          # Next.js 配置，启用静态导出
-├── package.json            # 项目依赖和脚本，使用 Bun
-├── bun.lock                # Bun 锁文件
-├── public/                 # 旧站静态产物和图标资源
+├── next.config.js          # Next.js config with static export
+├── package.json            # Dependencies and scripts, using Bun
+├── bun.lock                # Bun lockfile
+├── public/                 # Static assets, icons, llms.txt
 ├── src/
-│   ├── app/                # Next.js App Router 页面
-│   ├── components/         # 页面组件和标签编辑组件
-│   └── lib/                # 标签模型、本地存储等纯逻辑
-└── tmp_imgs/               # 参考截图
+│   ├── app/                # Next.js App Router pages
+│   ├── components/         # UI and label editing components
+│   └── lib/                # Label models, local storage, SEO config
+├── docs/                   # API notes and marketing/SEO plan
+└── tmp_imgs/               # README screenshots and development references
 ```
 
-## 环境要求
+## Requirements
 
-安装 Bun：
+Install Bun:
 
 ```bash
 curl -fsSL https://bun.sh/install | bash
 ```
 
-确认版本：
+Check the version:
 
 ```bash
 bun --version
 ```
 
-当前项目使用：
+Current project version:
 
 ```text
 bun@1.3.13
 ```
 
-## 安装依赖
+## Install
 
 ```bash
 bun install
 ```
 
-## 环境变量
+## Environment Variables
 
-复制示例配置：
+Copy the example config:
 
 ```bash
 cp .env.example .env.local
 ```
 
-常用配置：
+Common config:
 
 ```text
 NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000
@@ -81,60 +152,81 @@ NEXT_PUBLIC_LODOP_DOWNLOAD_URL=https://label-1254307677.cos.ap-chengdu.myqcloud.
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
-前端可见变量需要使用 `NEXT_PUBLIC_` 前缀；不要把后端密钥、数据库密码等敏感信息写入这些变量。
+Client-visible variables must use the `NEXT_PUBLIC_` prefix. Do not put backend secrets, database passwords, or private keys in these variables.
 
-## 本地开发
+Before production builds, set `NEXT_PUBLIC_SITE_URL` to the public domain:
+
+```text
+NEXT_PUBLIC_SITE_URL=https://label.zwglass.net
+```
+
+This value is used for canonical URLs, Open Graph URLs, `sitemap.xml`, `robots.txt`, and structured data.
+
+## Local Development
 
 ```bash
 bun run dev
 ```
 
-默认访问：
+Default URL:
 
 ```text
 http://localhost:3000
 ```
 
-如需指定地址和端口：
+Custom host and port:
 
 ```bash
 bun run dev -- --hostname 127.0.0.1 --port 3000
 ```
 
-## 构建
+## Build
 
 ```bash
 bun run build
 ```
 
-构建完成后，静态文件输出到：
+Static files are generated in:
 
 ```text
 out/
 ```
 
-## 生产运行
+## Production
 
-本项目配置了静态导出：
+This project uses static export:
 
 ```js
 output: "export"
 ```
 
-生产环境推荐直接部署 `out/` 目录到 Nginx、静态网站服务或对象存储。
+Deploy the `out/` directory to Nginx, static hosting, GitHub Pages, object storage, or another static web host.
 
-如果只是本地预览静态构建结果，可以使用任意静态文件服务器，例如：
+To preview the static build locally:
 
 ```bash
 bunx serve out
 ```
 
-## 部署
+## Marketing and Search
 
-GitHub Pages
+The project follows early-stage distribution ideas from [Marketing for Founders](https://github.com/EdoStra/Marketing-for-Founders), with an emphasis on SEO, AEO, GEO, free-tool marketing, and directory/community launches.
 
+Current foundations:
 
-## 注意事项
+- English-first page titles, descriptions, canonical URLs, Open Graph, and Twitter metadata.
+- `SoftwareApplication`, `FAQPage`, `HowTo`, and `BreadcrumbList` structured data.
+- `/robots.txt`, `/sitemap.xml`, and `/llms.txt` for search engines and AI crawlers.
+- Answer-style page content for online label printing, barcode labels, QR code labels, eyeglass lens labels, and LODOP/C-Lodop browser printing.
 
-- 标签保存优先使用浏览器 `localStorage`，同时支持导出 JSON 文件。
-- 打印逻辑使用 `window.print()` 作为可靠基础；如果浏览器环境存在 `LODOP` 或 `CLODOP`，打印机下拉框会尝试读取打印机列表。
+Marketing execution plan:
+
+```text
+docs/marketing_seo_aeo_geo_plan.md
+```
+
+## Notes
+
+- Label templates are saved in browser `localStorage` and can be exported as JSON files.
+- Printing uses `window.print()` as the reliable browser fallback. If `LODOP` or `CLODOP` exists in the browser environment, the printer selector attempts to read local printers.
+- `tmp_imgs/` is used for README screenshots and development references.

@@ -390,16 +390,16 @@ const dictionaries = {
 };
 
 const LanguageContext = createContext({
-  language: "zh",
+  language: "en",
   setLanguage: () => {},
   t: (key, ...args) => {
-    const value = dictionaries.zh[key] || key;
+    const value = dictionaries.en[key] || dictionaries.zh[key] || key;
     return typeof value === "function" ? value(...args) : value;
   },
 });
 
 export function LanguageProvider({ children }) {
-  const [language, setLanguageState] = useState("zh");
+  const [language, setLanguageState] = useState("en");
 
   useEffect(() => {
     try {
@@ -408,7 +408,7 @@ export function LanguageProvider({ children }) {
         setLanguageState(savedLanguage);
       }
     } catch {
-      setLanguageState("zh");
+      setLanguageState("en");
     }
   }, []);
 

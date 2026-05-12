@@ -33,6 +33,119 @@ import {
 import { getReadyLodop, sendLabelToLodop } from "@/lib/lodopPrint";
 import { useI18n } from "@/lib/i18n";
 
+const seoCopy = {
+  zh: {
+    common: {
+      heading: "免费在线标签打印工具",
+      intro:
+        "ZWGlass Label Print 可在浏览器中创建通用标签，适合商品贴标、仓储标签、二维码标签、条形码标签和小批量办公标签打印。",
+      points: [
+        "支持编辑文本、字号、加粗、旋转、二维码、条形码和标签尺寸。",
+        "模板保存在浏览器本地，并可导出 JSON 文件用于备份和迁移。",
+        "可使用浏览器打印预览；安装 LODOP/C-Lodop 后可读取本地打印机并直接打印。",
+      ],
+      faqs: [
+        {
+          question: "如何在线打印自定义标签？",
+          answer: "在页面中新建标签，编辑文本、二维码或条形码，设置标签尺寸和打印份数，然后点击打印或打印预览。",
+        },
+        {
+          question: "是否支持二维码和条形码标签？",
+          answer: "支持。可以显示并编辑二维码和条形码内容、尺寸与位置，适合商品编号、链接和库存标签。",
+        },
+      ],
+    },
+    lens: {
+      heading: "眼镜片标签批量打印工具",
+      intro:
+        "镜片标签页面面向眼镜店、镜片加工厂和镜片仓储流程，可创建包含度数、直径、中心厚度、折射率、膜色等信息的专业镜片标签。",
+      points: [
+        "支持镜片参数录入、中心厚度和直径编辑，以及多度数组合批量打印。",
+        "标签中可加入二维码、条形码和自定义文本，便于追踪订单、库存和镜片信息。",
+        "可通过 LODOP/C-Lodop 输出到本地标签打印机，也可使用浏览器打印预览。",
+      ],
+      faqs: [
+        {
+          question: "如何批量打印眼镜片标签？",
+          answer: "先创建镜片标签模板，打开镜片批量打印，填写各度数组合的数量，再选择打印机并提交批量打印。",
+        },
+        {
+          question: "镜片标签适合记录哪些信息？",
+          answer: "可记录球镜、柱镜、直径、中心厚度、折射率、阿贝数、膜色、产地、设计和条码等信息。",
+        },
+      ],
+    },
+  },
+  en: {
+    common: {
+      heading: "Free online label printing tool",
+      intro:
+        "ZWGlass Label Print creates browser-based labels for product labeling, warehouse labels, QR code labels, barcode labels, and small office print runs.",
+      points: [
+        "Edit text, font size, bold style, rotation, QR codes, barcodes, and label dimensions.",
+        "Templates are saved in browser storage and can be exported as JSON backups.",
+        "Use browser print preview, or install LODOP/C-Lodop to read local printers and print directly.",
+      ],
+      faqs: [
+        {
+          question: "How do I print a custom label online?",
+          answer: "Create a label, edit text, QR code or barcode fields, set size and quantity, then use print or print preview.",
+        },
+        {
+          question: "Does it support QR code and barcode labels?",
+          answer: "Yes. You can edit QR code and barcode content, size, and position for product IDs, links, and inventory labels.",
+        },
+      ],
+    },
+    lens: {
+      heading: "Eyeglass lens label batch printing tool",
+      intro:
+        "The lens label page helps optical shops, lens labs, and lens warehouses print labels with power, diameter, center thickness, refractive index, coating color, and related lens data.",
+      points: [
+        "Enter lens parameters, edit center thickness and diameter, and batch print multiple power combinations.",
+        "Add QR codes, barcodes, and custom text to track orders, inventory, and lens details.",
+        "Print through LODOP/C-Lodop to a local label printer or use browser print preview.",
+      ],
+      faqs: [
+        {
+          question: "How can I batch print eyeglass lens labels?",
+          answer: "Create a lens label template, open batch printing, enter quantities for each power combination, choose a printer, and submit the print job.",
+        },
+        {
+          question: "What lens data can the label include?",
+          answer: "It can include sphere, cylinder, diameter, center thickness, refractive index, Abbe value, coating color, origin, design, and barcode data.",
+        },
+      ],
+    },
+  },
+};
+
+function SeoAnswerContent({ type, language }) {
+  const copy = (seoCopy[language] || seoCopy.zh)[type === "lens" ? "lens" : "common"];
+
+  return (
+    <section className="mt-16 border-t border-base-300 pt-10 text-left text-base-content">
+      <h2 className="text-2xl font-bold">{copy.heading}</h2>
+      <p className="mt-4 leading-7 text-base-content/80">{copy.intro}</p>
+      <ul className="mt-6 grid gap-3 leading-7 text-base-content/80 md:grid-cols-3">
+        {copy.points.map((point) => (
+          <li className="rounded border border-base-300 bg-base-100 p-4" key={point}>
+            {point}
+          </li>
+        ))}
+      </ul>
+      <div className="mt-8 grid gap-4 md:grid-cols-2">
+        {copy.faqs.map((item) => (
+          <article className="rounded border border-base-300 bg-base-100 p-4" key={item.question}>
+            <h3 className="font-bold">{item.question}</h3>
+            <p className="mt-2 leading-7 text-base-content/80">{item.answer}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export default function LabelPage({ type }) {
   const { t, language } = useI18n();
   const fallback = useMemo(
@@ -489,6 +602,7 @@ export default function LabelPage({ type }) {
               ) : null}
             </div>
           </div>
+          <SeoAnswerContent type={type} language={language} />
         </section>
       </main>
 
