@@ -125,17 +125,23 @@ export function updateLensLabelPower(label, sph, cyl) {
   const thickness = powerRow.thickness || "1.2";
   const diameter = powerRow.diameter || "72";
 
-  return {
+  const lensPrintLabels =  {
     ...label,
     texts: label.texts.map((text, index, texts) => {
+      const testSphCylValue = String(text.value ?? "").trim();
+      if (/^S\s*[:：]/i.test(testSphCylValue)) return { ...text, value: `S:${sph}` };
+      if (/^C\s*[:：]/i.test(testSphCylValue)) return { ...text, value: `C:${cyl}` };
+      // if (/^S:[+-]?\d/.test(text.value)) return { ...text, value: `S:${sph}` };
+      // if (/^C:[+-]?\d/.test(text.value)) return { ...text, value: `C:${cyl}` };
       const prevValue = texts[index - 1]?.value;
-      if (/^S:[+-]?\d/.test(text.value)) return { ...text, value: `S:${sph}` };
-      if (/^C:[+-]?\d/.test(text.value)) return { ...text, value: `C:${cyl}` };
       if (prevValue === "中心厚度:" || prevValue === "CT:") return { ...text, value: `${thickness}mm` };
       if (prevValue === "直径:" || prevValue === "Dia:") return { ...text, value: `${diameter}mm` };
       return { ...text };
     }),
   };
+
+  // console.log("------ lensPrintLabels:\n", lensPrintLabels)
+  return lensPrintLabels
 }
 
 export function createLensTexts(options = {}) {

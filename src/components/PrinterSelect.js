@@ -71,6 +71,7 @@ export default function PrinterSelect({ value, onChange, onNotify = () => {} }) 
   const [printers, setPrinters] = useState([t("defaultPrinter")]);
   const [loading, setLoading] = useState(false);
   const latestRef = useRef({ value, onChange, onNotify });
+  const initializedRef = useRef(false);
 
   useEffect(() => {
     latestRef.current = { value, onChange, onNotify };
@@ -83,15 +84,17 @@ export default function PrinterSelect({ value, onChange, onNotify = () => {} }) 
 
   const reload = useCallback(async () => {
     const latest = latestRef.current;
+    const wasInitialized = initializedRef.current;
     setLoading(true);
     try {
       const detected = await readLodopPrinters(t);
       const next = detected.length ? detected : [t("defaultPrinter")];
       const savedIndex = Number(window.localStorage.getItem(printerStorageKey));
       let selectedIndex = Number.isInteger(savedIndex) && savedIndex >= 0 && savedIndex < next.length ? savedIndex : 0;
-      if (latest.value >= 0 && latest.value < next.length) selectedIndex = latest.value;
+      if (wasInitialized && latest.value >= 0 && latest.value < next.length) selectedIndex = latest.value;
 
       setPrinters(next);
+      initializedRef.current = true;
       latest.onChange(selectedIndex);
       latest.onNotify(detected.length ? t("printersFound", detected.length) : t("noLodopPrinters"), detected.length ? "success" : "warning");
     } catch (error) {
