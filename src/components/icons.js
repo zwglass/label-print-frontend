@@ -9,6 +9,7 @@ export function Icon({ name }) {
     qr: "M4 4h6v6H4z M14 4h6v6h-6z M4 14h6v6H4z M14 14h2v6h-2z M18 14h2v6h-2z",
     barcode: "M5 4v16 M9 4v16 M12 4v16 M16 4v16 M19 4v16",
     plus: "M12 5v14 M5 12h14",
+    link: "M10 13a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7l-1 1 M14 11a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1",
     trash: "M4 7h16 M10 11v6 M14 11v6 M6 7l1 14h10l1-14 M9 7V4h6v3",
     move: "M12 3l3 3h-2v4h4V8l3 3-3 3v-2h-4v4h2l-3 3-3-3h2v-4H7v2l-3-3 3-3v2h4V6H9z",
     lens: "M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16z M7 12h10 M9 9l-3 3 3 3 M15 9l3 3-3 3",

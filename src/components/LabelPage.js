@@ -10,6 +10,8 @@ import LensBatchPrintDialog from "./LensBatchPrintDialog";
 import LensPowerDialog from "./LensPowerDialog";
 import LensCreateDialog from "./LensCreateDialog";
 import LabelSelectDialog from "./LabelSelectDialog";
+import FeatureAssociationDialog from "./FeatureAssociationDialog";
+import CommonBatchPrintDialog from "./CommonBatchPrintDialog";
 import QrCodeEditor from "./QrCodeEditor";
 import TextEditor from "./TextEditor";
 import TopAlert from "./TopAlert";
@@ -162,6 +164,8 @@ export default function LabelPage({ type }) {
   const [lensCreateOpen, setLensCreateOpen] = useState(false);
   const [lensPowerOpen, setLensPowerOpen] = useState(false);
   const [lensBatchOpen, setLensBatchOpen] = useState(false);
+  const [commonBatchOpen, setCommonBatchOpen] = useState(false);
+  const [featureAssociationOpen, setFeatureAssociationOpen] = useState(false);
   const [labelSelectOpen, setLabelSelectOpen] = useState(false);
   const [savedLabels, setSavedLabels] = useState([]);
   const [batchPrintLabels, setBatchPrintLabels] = useState([]);
@@ -251,6 +255,19 @@ export default function LabelPage({ type }) {
     setLabel((current) => ({ ...current, lensPowerRows: rows }));
   };
 
+  const updateFeatureAssociation = ({ feature1_data, feature1_association_data }) => {
+    setLabel((current) => ({
+      ...current,
+      features_data: {
+        ...(current.features_data || {}),
+        feature1_data,
+        feature1_association_data,
+      },
+    }));
+    setFeatureAssociationOpen(false);
+    notify(t("featureAssociationUpdated"), "success");
+  };
+
   const addText = () => {
     setLabel((current) => {
       const nextText = createText(current);
@@ -308,6 +325,8 @@ export default function LabelPage({ type }) {
     setLensCreateOpen(false);
     setLensPowerOpen(false);
     setLensBatchOpen(false);
+    setCommonBatchOpen(false);
+    setFeatureAssociationOpen(false);
     setBatchPrintLabels([]);
     notify(t("commonTemplateCreated"), "success");
   };
@@ -385,6 +404,30 @@ export default function LabelPage({ type }) {
     setLensBatchOpen(false);
     setBatchPrintLabels([]);
     notify(t("batchPrintQueued", jobCount, totalCount), "success");
+  };
+
+  const saveCommonBatchRowsAndColumns = (result) => {
+    setLabel((current) => ({
+      ...current,
+      features_data: {
+        ...(current.features_data || {}),
+        feature1_data: result.rows || [],
+        feature2_data: result.columns || [],
+      },
+    }));
+  };
+
+  const printCommonBatch = (result) => {
+    const totalCount = Number(result?.totalCount) || 0;
+    const jobCount = Number(result?.jobCount) || 0;
+    if (totalCount < 1) {
+      notify(t("batchQuantityRequired"), "warning");
+      return;
+    }
+
+    setCommonBatchOpen(false);
+    setBatchPrintLabels([]);
+    notify(t("commonBatchPrintQueued", jobCount, totalCount), "success");
   };
 
   const getEditorAnchor = () => {
@@ -523,8 +566,15 @@ export default function LabelPage({ type }) {
             </button>
           ) : null}
 
+          {type === "common" ? (
+            <button className="btn btn-active btn-success btn-lg my-10 w-full" type="button" onClick={() => setCommonBatchOpen(true)}>
+              {t("commonBatchPrint")}
+            </button>
+          ) : null}
+
           <LabelToolbar
             isLens={type === "lens"}
+            showFeatureAssociation={type === "common"}
             editText={editText}
             onToggleEdit={(checked) => {
               setEditText(checked);
@@ -551,6 +601,9 @@ export default function LabelPage({ type }) {
             onAddText={addText}
             onEditSize={() => setSizeOpen(true)}
             onEditLensPower={() => setLensPowerOpen(true)}
+            onEditFeatureAssociation={() => {
+              if (type === "common") setFeatureAssociationOpen(true);
+            }}
           />
 
           <div className="flex items-start justify-center">
@@ -658,6 +711,21 @@ export default function LabelPage({ type }) {
         onClose={() => setLensBatchOpen(false)}
         onPrint={printLensBatch}
         onNotify={notify}
+      />
+      <CommonBatchPrintDialog
+        open={type === "common" && commonBatchOpen}
+        label={label}
+        printerIndex={printerIndex}
+        onClose={() => setCommonBatchOpen(false)}
+        onSave={saveCommonBatchRowsAndColumns}
+        onPrint={printCommonBatch}
+        onNotify={notify}
+      />
+      <FeatureAssociationDialog
+        open={type === "common" && featureAssociationOpen}
+        label={label}
+        onCancel={() => setFeatureAssociationOpen(false)}
+        onSave={updateFeatureAssociation}
       />
       <LabelSelectDialog
         open={labelSelectOpen}

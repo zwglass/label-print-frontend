@@ -8,6 +8,12 @@ export default function TextEditor({ text, onChange, onDelete, onRotate, onClose
   const { t } = useI18n();
   if (!text) return null;
 
+  const summaryText = text.display_title
+    ? t("savedTitle")
+    : text.feature_index === 1 || text.feature_index === 2
+      ? `Feature ${text.feature_index}`
+      : "";
+
   return (
     <FloatingEditorFrame title={t("textBoxEditor")} onClose={onClose} frameStyle={frameStyle} arrowStyle={arrowStyle} onMeasure={onMeasure}>
       <div className="editor-toolstrip">
@@ -19,10 +25,7 @@ export default function TextEditor({ text, onChange, onDelete, onRotate, onClose
         </button>
       </div>
 
-      <div className="editor-text-summary">
-        {t("textBoxProps")} <strong>{text.value || t("emptyText")}</strong>
-        <button className="link link-primary" type="button">More</button>
-      </div>
+      {summaryText ? <div className="editor-text-summary editor-text-summary-highlight">{summaryText}</div> : null}
 
       <div className="editor-form">
         <label className="editor-row">

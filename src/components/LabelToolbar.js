@@ -3,7 +3,7 @@
 import { Icon } from "./icons";
 import { useI18n } from "@/lib/i18n";
 
-export default function LabelToolbar({ isLens, editText, onToggleEdit, onToggleQr, onEditQr, onToggleBarcode, onEditBarcode, onAddText, onEditSize, onEditLensPower }) {
+export default function LabelToolbar({ isLens, showFeatureAssociation = false, editText, onToggleEdit, onToggleQr, onEditQr, onToggleBarcode, onEditBarcode, onAddText, onEditSize, onEditLensPower, onEditFeatureAssociation }) {
   const { t } = useI18n();
 
   return (
@@ -19,6 +19,11 @@ export default function LabelToolbar({ isLens, editText, onToggleEdit, onToggleQ
         {isLens ? (
           <button className="btn btn-circle btn-info" title={t("editLensPower")} type="button" onClick={onEditLensPower}>
             <Icon name="lens" />
+          </button>
+        ) : null}
+        {showFeatureAssociation ? (
+          <button className="btn btn-circle btn-info" title={t("featureAssociationEdit")} type="button" onClick={onEditFeatureAssociation}>
+            <Icon name="link" />
           </button>
         ) : null}
         <button className="btn btn-circle btn-warning" title={t("showQrCode")} type="button" onClick={onToggleQr}>

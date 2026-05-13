@@ -336,6 +336,10 @@ body {
   font-weight: 500;
 }
 
+.editor-text-summary-highlight {
+  color: #dc2626;
+}
+
 .editor-form {
   display: grid;
   gap: 12px;
@@ -852,6 +856,298 @@ body {
   height: 34px;
   padding: 0;
   font-size: 16px;
+}
+
+.two-dimensional-input {
+  position: relative;
+  display: grid;
+  gap: 12px;
+  color: #242424;
+}
+
+.two-dimensional-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.two-dimensional-mode-tabs .btn {
+  min-width: 84px;
+  font-weight: 800;
+}
+
+.two-dimensional-batch-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.two-dimensional-batch-tools .btn {
+  gap: 6px;
+  font-weight: 800;
+}
+
+.two-dimensional-batch-tools .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.two-dimensional-batch-input {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.two-dimensional-batch-input .input {
+  width: 180px;
+}
+
+.two-dimensional-column-actions,
+.two-dimensional-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.two-dimensional-column-actions {
+  justify-content: flex-end;
+}
+
+.two-dimensional-row-actions {
+  justify-content: flex-start;
+}
+
+.two-dimensional-column-actions .input,
+.two-dimensional-row-actions .input,
+.two-dimensional-column-actions .select,
+.two-dimensional-row-actions .select {
+  width: 168px;
+}
+
+.two-dimensional-column-actions .btn,
+.two-dimensional-row-actions .btn {
+  gap: 6px;
+  font-weight: 800;
+}
+
+.two-dimensional-column-actions .icon,
+.two-dimensional-row-actions .icon,
+.two-dimensional-header-menu .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.two-dimensional-table-wrap {
+  width: 100%;
+  max-height: min(66vh, 700px);
+  overflow: visible auto;
+  border: 1px solid #e8e8e8;
+  background: #fff;
+}
+
+.two-dimensional-table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 16px;
+}
+
+.two-dimensional-table th,
+.two-dimensional-table td {
+  width: 112px;
+  height: 44px;
+  padding: 0 8px;
+  border: 1px solid #ececec;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.two-dimensional-table th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  width: 132px;
+  background: #fff;
+}
+
+.two-dimensional-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: #fafafa;
+  font-weight: 800;
+}
+
+.two-dimensional-table thead th:first-child {
+  z-index: 4;
+}
+
+.two-dimensional-header-button {
+  width: 100%;
+  min-height: 32px;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+
+.two-dimensional-header-button:hover {
+  color: #2563eb;
+}
+
+.two-dimensional-header-menu {
+  position: absolute;
+  z-index: 20;
+  min-width: 116px;
+  padding: 6px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.14);
+}
+
+.two-dimensional-header-menu.column-menu {
+  transform: translateY(calc(-100% - 4px));
+}
+
+.two-dimensional-header-menu.row-menu {
+  transform: none;
+}
+
+.two-dimensional-header-menu .btn {
+  width: 100%;
+  justify-content: flex-start;
+  gap: 6px;
+  font-weight: 800;
+}
+
+.two-dimensional-table td {
+  background: #fff;
+}
+
+.two-dimensional-table td.selected {
+  background: #e8f2ff;
+  box-shadow: inset 0 0 0 2px #2563eb;
+}
+
+.two-dimensional-table td.invalid {
+  background: #fff1f2;
+}
+
+.two-dimensional-table td.selected.invalid {
+  background: linear-gradient(135deg, #e8f2ff 0%, #e8f2ff 50%, #fff1f2 50%, #fff1f2 100%);
+}
+
+.two-dimensional-table .input {
+  width: 100%;
+  height: 32px;
+  padding: 0 4px;
+  border-radius: 4px;
+  font-size: 15px;
+}
+
+.two-dimensional-table .input[aria-invalid="true"] {
+  color: #b91c1c;
+}
+
+.two-dimensional-table.batch-mode td {
+  cursor: cell;
+  user-select: none;
+}
+
+.two-dimensional-table.batch-mode .input {
+  pointer-events: none;
+  cursor: cell;
+}
+
+.feature-association-modal {
+  width: min(96vw, 1400px);
+  max-width: none;
+  padding: 0;
+  border-radius: 4px;
+  background: #fff;
+  color: #242424;
+}
+
+.feature-association-title {
+  height: 64px;
+  padding: 0 28px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.feature-association-title h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.feature-association-body {
+  padding: 24px 28px;
+}
+
+.feature-association-actions {
+  padding: 0 28px 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.feature-association-actions .btn {
+  min-width: 86px;
+  font-weight: 800;
+}
+
+.common-batch-modal {
+  width: min(96vw, 1600px);
+  max-width: none;
+  padding: 0;
+  border-radius: 4px;
+  background: #fff;
+  color: #242424;
+}
+
+.common-batch-title {
+  height: 64px;
+  padding: 0 28px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.common-batch-title h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.common-batch-body {
+  padding: 24px 28px;
+}
+
+.common-batch-actions {
+  padding: 0 28px 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.common-batch-actions .btn {
+  min-width: 86px;
+  font-weight: 800;
 }
 
 .batch-print-area {

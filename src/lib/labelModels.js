@@ -38,7 +38,7 @@ export const defaultLabel = {
     features_data: {
         feature1_data: [],      // 批量打印数量二维表格行名称
         feature2_data: [],      // 批量打印数量二维表格列名称
-        feature1_association_data: {},    // 和 feature1 关联的 texts; 如果有设置, 批量打印标签是, 关联text, 自动更新值
+        feature1_association_data: {},    // 和 feature1 关联的 texts; 如果有设置, 批量打印标签时关联text, 自动更新值
     },
 };
 
@@ -677,6 +677,15 @@ export function normalizeLabel(input, fallback, options = {}) {
             ...(input.barcode || {}),
         },
         lensPowerRows: Array.isArray(input.lensPowerRows) ? input.lensPowerRows : fallback.lensPowerRows,
+        features_data: {
+            ...fallback.features_data,
+            ...(input.features_data || {}),
+            feature1_data: Array.isArray(input.features_data?.feature1_data) ? input.features_data.feature1_data : fallback.features_data.feature1_data,
+            feature2_data: Array.isArray(input.features_data?.feature2_data) ? input.features_data.feature2_data : fallback.features_data.feature2_data,
+            feature1_association_data: input.features_data?.feature1_association_data && typeof input.features_data.feature1_association_data === "object" ?
+                input.features_data.feature1_association_data :
+                fallback.features_data.feature1_association_data,
+        },
     };
 }
 
