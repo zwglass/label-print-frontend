@@ -15,7 +15,6 @@ import TextEditor from "./TextEditor";
 import TopAlert from "./TopAlert";
 import { Icon } from "./icons";
 import {
-  createCommonLabel,
   createCommonTemplateLabel,
   createLensLabel,
   createText,
@@ -149,7 +148,7 @@ function SeoAnswerContent({ type, language }) {
 export default function LabelPage({ type }) {
   const { t, language } = useI18n();
   const fallback = useMemo(
-    () => (type === "lens" ? createLensLabel({ language }) : createCommonLabel({ language })),
+    () => (type === "lens" ? createLensLabel({ language }) : createCommonTemplateLabel({ language })),
     [type, language],
   );
   const [printerIndex, setPrinterIndex] = useState(0);
