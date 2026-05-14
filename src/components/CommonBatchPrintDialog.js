@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import TwoDimensionalInputTable, { getTwoDimensionalInputData, getValidationResult } from "./TwoDimensionalInputTable";
 import { getReadyLodop, sendLabelToLodop } from "@/lib/lodopPrint";
 import { useI18n } from "@/lib/i18n";
+import { updateCommonBatchLabel } from "@/lib/labelModels";
 
 function isQuantityValueValid(value) {
   if (value === "") return true;
@@ -35,32 +36,6 @@ function sanitizeQuantityValues(nextValues = {}, previousValues = {}) {
       ),
     ])
   );
-}
-
-function updateAssociatedTextValue(textValue, associationValues) {
-  const match = String(textValue ?? "").match(/^([^:：]+)\s*[:：]\s*(.*)$/);
-  if (!match) return textValue;
-
-  const key = match[1].trim();
-  if (!Object.prototype.hasOwnProperty.call(associationValues, key)) return textValue;
-
-  return `${key}: ${associationValues[key] ?? ""}`;
-}
-
-function updateCommonBatchLabel(label, feature1, feature2) {
-  const associationValues = label.features_data?.feature1_association_data?.[feature1];
-
-  return {
-    ...label,
-    texts: (label.texts || []).map((text) => {
-      if (Number(text.feature_index || 0) === 1) return { ...text, value: feature1 };
-      if (Number(text.feature_index || 0) === 2) return { ...text, value: feature2 };
-      if (associationValues && !text.display_title && Number(text.feature_index || 0) === 0) {
-        return { ...text, value: updateAssociatedTextValue(text.value, associationValues) };
-      }
-      return text;
-    }),
-  };
 }
 
 export default function CommonBatchPrintDialog({ open, label, printerIndex = 0, onClose, onSave, onPrint, onNotify = () => {} }) {

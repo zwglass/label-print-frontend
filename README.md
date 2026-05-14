@@ -12,13 +12,13 @@ Keywords: free online label printer, online label printer, free label printing s
 
 ## Screenshots
 
-![ZWGlass Label Print home](tmp_imgs/app_home.png)
+![ZWGlass Label Print home](tmp_imgs/app_home.jpeg)
 
-![Barcode editor](tmp_imgs/条形码编辑弹窗.png)
+![Barcode editor](tmp_imgs/条形码编辑弹窗.jpeg)
 
-![QR code editor](tmp_imgs/二维码编辑弹窗.png)
+![QR code editor](tmp_imgs/二维码编辑弹窗.jpeg)
 
-![Lens label batch printing](tmp_imgs/镜片批量打印弹窗.png)
+![Lens label batch printing](tmp_imgs/镜片批量打印弹窗.jpeg)
 
 ## Use Cases
 

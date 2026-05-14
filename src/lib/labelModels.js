@@ -213,6 +213,52 @@ export function updateLensLabelPower(label, sph, cyl) {
     return lensPrintLabels
 }
 
+function getAssociatedTextKey(textValue) {
+    const match = String(textValue ?? "").match(/^([^:：]+)\s*[:：]\s*(.*)$/);
+    return match ? match[1].trim() : "";
+}
+
+export function updateAssociatedTextValue(textValue, associationValues) {
+    const key = getAssociatedTextKey(textValue);
+    if (!key) return textValue;
+    if (!Object.prototype.hasOwnProperty.call(associationValues, key)) return textValue;
+
+    return `${key}: ${associationValues[key] ?? ""}`;
+}
+
+function updateFeatureTextValue(textValue, featureValue) {
+    const key = getAssociatedTextKey(textValue);
+    if (!key) return featureValue;
+    return updateAssociatedTextValue(textValue, {
+        [key]: featureValue
+    });
+}
+
+export function updateCommonBatchLabel(label, feature1, feature2) {
+    const associationValues = label.features_data?.feature1_association_data?.[feature1];
+
+    return {
+        ...label,
+        texts: (label.texts || []).map((text) => {
+            if (Number(text.feature_index || 0) === 1) return {
+                ...text,
+                value: updateFeatureTextValue(text.value, feature1)
+            };
+            if (Number(text.feature_index || 0) === 2) return {
+                ...text,
+                value: updateFeatureTextValue(text.value, feature2)
+            };
+            if (associationValues && !text.display_title && Number(text.feature_index || 0) === 0) {
+                return {
+                    ...text,
+                    value: updateAssociatedTextValue(text.value, associationValues)
+                };
+            }
+            return text;
+        }),
+    };
+}
+
 export function createLensTexts(options = {}) {
     const language = options.language || "zh";
     const english = isEnglishLanguage(language);
