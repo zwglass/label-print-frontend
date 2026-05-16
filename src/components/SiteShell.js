@@ -20,6 +20,7 @@ const tokenStorageKey = "zwglass-label:companyToken";
 const navItems = [
   { href: "/", labelKey: "navCommon" },
   { href: "/lens/", labelKey: "navLens" },
+  { href: "/guestbook/", labelKey: "navGuestbook" },
   { href: "/contact/", labelKey: "navHelp" },
 ];
 

@@ -1,6 +1,28 @@
 import BarcodeView from "./BarcodeView";
 import QrCodeView from "./QrCodeView";
 
+function isVariableText(text) {
+  return text?.association === true || Number(text?.feature_index || 0) > 0;
+}
+
+function renderTextValue(text) {
+  const value = String(text.value ?? "");
+  if (!isVariableText(text)) return value;
+
+  return value.split(/(\{[^{}]*\})/g).map((part, index) => {
+    if (!part) return null;
+    if (/^\{[^{}]*\}$/.test(part)) {
+      return (
+        <span key={index} className="text-sky-600">
+          {part}
+        </span>
+      );
+    }
+
+    return part;
+  });
+}
+
 export default function LabelPreview({
   label,
   selectedIndex = -1,
@@ -16,13 +38,16 @@ export default function LabelPreview({
       style={{ width: `${label.width}mm`, height: `${label.height}mm` }}
     >
       {label.texts.map((text, index) => (
-        <input
+        <p
           key={index}
           className={selectedIndex === index ? "label-text selected" : "label-text"}
-          value={text.value}
-          readOnly={!editText}
+          contentEditable={editText}
+          suppressContentEditableWarning
           onClick={() => onSelect(index)}
-          onChange={(event) => onTextChange(index, { value: event.target.value })}
+          onInput={(event) => onTextChange(index, { value: event.currentTarget.textContent || "" })}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") event.preventDefault();
+          }}
           style={{
             left: `${text.x}mm`,
             top: `${text.y}mm`,
@@ -32,7 +57,9 @@ export default function LabelPreview({
             transform: `rotate(${text.rotate || 0}deg)`,
             transformOrigin: "0 0",
           }}
-        />
+        >
+          {renderTextValue(text)}
+        </p>
       ))}
       {label.qrCode.visible && <QrCodeView qrCode={label.qrCode} onSelect={onSelectQr} />}
       {label.barcode.visible && <BarcodeView barcode={label.barcode} onSelect={onSelectBarcode} />}

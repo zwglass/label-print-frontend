@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import DateTimeFormatSelector from "./DateTimeFormatSelector";
 import { Icon } from "./icons";
 
 const modes = [
@@ -9,20 +10,24 @@ const modes = [
 ];
 
 const defaultValidate = () => true;
+const defaultOperationCallback = () => ({ status: true, error: "" });
 
 function normalizeItem(item, index) {
   if (item && typeof item === "object") {
+    const id = item.id ?? item.key ?? item.value ?? index;
+    const value = item.value ?? item.label ?? item.key ?? "";
     return {
-      key: String(item.key ?? item.value ?? index),
-      label: item.label ?? item.value ?? item.key ?? "",
-      raw: item,
+      id: String(id),
+      value: String(value),
+      raw: { ...item, id: String(id), value: String(value) },
     };
   }
 
+  const value = String(item ?? "");
   return {
-    key: String(item ?? index),
-    label: item ?? "",
-    raw: item,
+    id: value || String(index),
+    value,
+    raw: { id: value || String(index), value },
   };
 }
 
@@ -64,39 +69,22 @@ function removeColumnValues(values, columnKey) {
   );
 }
 
-function renameRowValues(values, oldRowKey, newRowKey) {
-  const nextValues = { ...(values || {}) };
-  nextValues[newRowKey] = {
-    ...(nextValues[newRowKey] || {}),
-    ...(nextValues[oldRowKey] || {}),
+function getOperationResult(result) {
+  if (result === false) return { status: false, error: "" };
+  if (!result || result === true) return { status: true, error: "" };
+  return {
+    status: result.status ?? result.stauts ?? true,
+    error: result.error || "",
   };
-  delete nextValues[oldRowKey];
-  return nextValues;
 }
 
-function renameColumnValues(values, oldColumnKey, newColumnKey) {
-  return Object.fromEntries(
-    Object.entries(values || {}).map(([rowKey, rowValues]) => {
-      const nextRowValues = { ...(rowValues || {}) };
-      nextRowValues[newColumnKey] = nextRowValues[oldColumnKey] ?? nextRowValues[newColumnKey] ?? "";
-      delete nextRowValues[oldColumnKey];
-      return [rowKey, nextRowValues];
-    })
-  );
-}
-
-function renameItem(item, index, newName) {
-  if (item && typeof item === "object") {
-    const current = normalizeItem(item, index);
-    return {
-      ...item,
-      key: newName,
-      label: newName,
-      value: item.value === undefined || String(item.value) === current.key ? newName : item.value,
-    };
-  }
-
-  return newName;
+function renameItem(item, index, newValue) {
+  const current = normalizeItem(item, index);
+  return {
+    ...(item && typeof item === "object" ? item : {}),
+    id: current.id,
+    value: newValue,
+  };
 }
 
 export function getValidationResult(validate, value, context) {
@@ -116,9 +104,9 @@ export function* getTwoDimensionalInputData({ rows = [], columns = [], values = 
       yield {
         row: row.raw,
         column: column.raw,
-        rowKey: row.key,
-        columnKey: column.key,
-        value: getCellValue(values, row.key, column.key),
+        rowKey: row.id,
+        columnKey: column.id,
+        value: getCellValue(values, row.id, column.id),
       };
     }
   }
@@ -158,8 +146,16 @@ export default function TwoDimensionalInputTable({
   allowDeleteColumns = true,
   allowRenameRows = true,
   allowRenameColumns = true,
+  allowDateTimeFormat = false,
+  dateTimeFormatLabel = "日期时间格式",
   onRowsChange,
   onColumnsChange,
+  onAddRow = defaultOperationCallback,
+  onAddColumn = defaultOperationCallback,
+  onDeleteRow = defaultOperationCallback,
+  onDeleteColumn = defaultOperationCallback,
+  onRenameRow = defaultOperationCallback,
+  onRenameColumn = defaultOperationCallback,
   className = "",
 }) {
   const [internalMode, setInternalMode] = useState(defaultMode);
@@ -188,14 +184,17 @@ export default function TwoDimensionalInputTable({
   const columnOptionItems = useMemo(() => normalizeItems(columnNameOptions || []), [columnNameOptions]);
   const rowNameRestricted = Boolean(rowNameOptions?.length);
   const columnNameRestricted = Boolean(columnNameOptions?.length);
-  const existingRowKeys = useMemo(() => new Set(rowItems.map((row) => row.key)), [rowItems]);
-  const existingColumnKeys = useMemo(() => new Set(columnItems.map((column) => column.key)), [columnItems]);
+  const [operationError, setOperationError] = useState("");
+  const existingRowKeys = useMemo(() => new Set(rowItems.map((row) => row.id)), [rowItems]);
+  const existingRowValues = useMemo(() => new Set(rowItems.map((row) => row.value)), [rowItems]);
+  const existingColumnKeys = useMemo(() => new Set(columnItems.map((column) => column.id)), [columnItems]);
+  const existingColumnValues = useMemo(() => new Set(columnItems.map((column) => column.value)), [columnItems]);
   const availableRowOptions = useMemo(
-    () => rowOptionItems.filter((row) => !existingRowKeys.has(row.key)),
+    () => rowOptionItems.filter((row) => !existingRowKeys.has(row.id)),
     [existingRowKeys, rowOptionItems]
   );
   const availableColumnOptions = useMemo(
-    () => columnOptionItems.filter((column) => !existingColumnKeys.has(column.key)),
+    () => columnOptionItems.filter((column) => !existingColumnKeys.has(column.id)),
     [columnOptionItems, existingColumnKeys]
   );
   const modeItems = useMemo(
@@ -247,30 +246,33 @@ export default function TwoDimensionalInputTable({
   }, [headerMenu]);
 
   useEffect(() => {
-    if (rowNameRestricted && newRowName && !availableRowOptions.some((row) => row.key === newRowName)) {
+    if (rowNameRestricted && newRowName && !availableRowOptions.some((row) => row.id === newRowName)) {
       setNewRowName("");
     }
   }, [availableRowOptions, newRowName, rowNameRestricted]);
 
   useEffect(() => {
-    if (columnNameRestricted && newColumnName && !availableColumnOptions.some((column) => column.key === newColumnName)) {
+    if (columnNameRestricted && newColumnName && !availableColumnOptions.some((column) => column.id === newColumnName)) {
       setNewColumnName("");
     }
   }, [availableColumnOptions, columnNameRestricted, newColumnName]);
 
   const updateMode = (nextMode) => {
+    if (nextMode === "normal") {
+      setSelectedCells({});
+    }
     if (!mode) setInternalMode(nextMode);
     onModeChange?.(nextMode);
   };
 
   const updateCell = (row, column, value) => {
-    const nextValues = setCellValue(valuesRef.current, row.key, column.key, value);
+    const nextValues = setCellValue(valuesRef.current, row.id, column.id, value);
     valuesRef.current = nextValues;
     onChange(nextValues, {
       row: row.raw,
       column: column.raw,
-      rowKey: row.key,
-      columnKey: column.key,
+      rowKey: row.id,
+      columnKey: column.id,
       value,
     });
   };
@@ -302,112 +304,111 @@ export default function TwoDimensionalInputTable({
     }
   };
 
-  const getAddedItem = (name, optionItems) => {
-    const option = optionItems.find((item) => item.key === name);
-    return option ? option.raw : name;
+  const runOperationCallback = async (callback, ...args) => {
+    try {
+      const result = getOperationResult(await callback(...args));
+      if (!result.status) {
+        setOperationError(result.error || "");
+        return false;
+      }
+      setOperationError("");
+      return true;
+    } catch (error) {
+      setOperationError(error?.message || "");
+      return false;
+    }
   };
 
-  const addRow = () => {
+  const getAddedItem = (name, optionItems) => {
+    const option = optionItems.find((item) => item.id === name);
+    return option ? option.raw : { id: String(name), value: String(name) };
+  };
+
+  const addRow = async () => {
     const name = rowNameRestricted ? newRowName : newRowName.trim();
-    if (!name || existingRowKeys.has(String(name))) return;
+    if (!name || existingRowKeys.has(String(name)) || (!rowNameRestricted && existingRowValues.has(String(name)))) return;
 
     const item = getAddedItem(name, rowOptionItems);
+    if (!(await runOperationCallback(onAddRow, item))) return;
     updateRows([...(activeRows || []), item], { type: "add", item });
     setNewRowName("");
   };
 
-  const addColumn = () => {
+  const addColumn = async () => {
     const name = columnNameRestricted ? newColumnName : newColumnName.trim();
-    if (!name || existingColumnKeys.has(String(name))) return;
+    if (!name || existingColumnKeys.has(String(name)) || (!columnNameRestricted && existingColumnValues.has(String(name)))) return;
 
     const item = getAddedItem(name, columnOptionItems);
+    if (!(await runOperationCallback(onAddColumn, item))) return;
     updateColumns([...(activeColumns || []), item], { type: "add", item });
     setNewColumnName("");
   };
 
-  const deleteRow = (row) => {
-    updateRows((activeRows || []).filter((item, index) => normalizeItem(item, index).key !== row.key), {
+  const deleteRow = async (row) => {
+    if (!(await runOperationCallback(onDeleteRow, row.raw))) return;
+    updateRows((activeRows || []).filter((item, index) => normalizeItem(item, index).id !== row.id), {
       type: "delete",
       item: row.raw,
-      key: row.key,
+      key: row.id,
     });
 
-    const nextValues = removeRowValues(valuesRef.current, row.key);
+    const nextValues = removeRowValues(valuesRef.current, row.id);
     valuesRef.current = nextValues;
-    onChange(nextValues, { row: row.raw, rowKey: row.key, deleteRow: true });
+    onChange(nextValues, { row: row.raw, rowKey: row.id, deleteRow: true });
     setSelectedCells((current) =>
-      Object.fromEntries(Object.entries(current).filter(([, cell]) => cell.rowKey !== row.key))
+      Object.fromEntries(Object.entries(current).filter(([, cell]) => cell.rowKey !== row.id))
     );
     setHeaderMenu(null);
   };
 
-  const deleteColumn = (column) => {
-    updateColumns((activeColumns || []).filter((item, index) => normalizeItem(item, index).key !== column.key), {
+  const deleteColumn = async (column) => {
+    if (!(await runOperationCallback(onDeleteColumn, column.raw))) return;
+    updateColumns((activeColumns || []).filter((item, index) => normalizeItem(item, index).id !== column.id), {
       type: "delete",
       item: column.raw,
-      key: column.key,
+      key: column.id,
     });
 
-    const nextValues = removeColumnValues(valuesRef.current, column.key);
+    const nextValues = removeColumnValues(valuesRef.current, column.id);
     valuesRef.current = nextValues;
-    onChange(nextValues, { column: column.raw, columnKey: column.key, deleteColumn: true });
+    onChange(nextValues, { column: column.raw, columnKey: column.id, deleteColumn: true });
     setSelectedCells((current) =>
-      Object.fromEntries(Object.entries(current).filter(([, cell]) => cell.columnKey !== column.key))
+      Object.fromEntries(Object.entries(current).filter(([, cell]) => cell.columnKey !== column.id))
     );
     setHeaderMenu(null);
   };
 
-  const renameRow = (row) => {
+  const renameRow = async (row) => {
     if (!allowRenameRows || rowNameRestricted) return;
-    const nextName = window.prompt(renameRowLabel, row.label);
+    const nextName = window.prompt(renameRowLabel, row.value);
     const trimmedName = String(nextName ?? "").trim();
-    if (!trimmedName || trimmedName === row.key || existingRowKeys.has(trimmedName)) return;
+    if (!trimmedName || trimmedName === row.value || existingRowValues.has(trimmedName)) return;
 
+    const nextItem = { ...row.raw, value: trimmedName };
+    if (!(await runOperationCallback(onRenameRow, nextItem, row.raw))) return;
     const nextRows = (activeRows || []).map((item, index) => {
       const current = normalizeItem(item, index);
-      return current.key === row.key ? renameItem(item, index, trimmedName) : item;
+      return current.id === row.id ? renameItem(item, index, trimmedName) : item;
     });
-    updateRows(nextRows, { type: "rename", item: row.raw, key: row.key, nextKey: trimmedName });
-
-    const nextValues = renameRowValues(valuesRef.current, row.key, trimmedName);
-    valuesRef.current = nextValues;
-    onChange(nextValues, { row: row.raw, rowKey: row.key, nextRowKey: trimmedName, renameRow: true });
-    setSelectedCells((current) =>
-      Object.fromEntries(
-        Object.entries(current).map(([cellKey, cell]) => {
-          if (cell.rowKey !== row.key) return [cellKey, cell];
-          const nextCell = { ...cell, rowKey: trimmedName };
-          return [createCellKey(trimmedName, cell.columnKey), nextCell];
-        })
-      )
-    );
+    updateRows(nextRows, { type: "rename", item: row.raw, nextItem, key: row.id });
+    onChange(valuesRef.current, { row: row.raw, nextRow: nextItem, rowKey: row.id, renameRow: true });
     setHeaderMenu(null);
   };
 
-  const renameColumn = (column) => {
+  const renameColumn = async (column) => {
     if (!allowRenameColumns || columnNameRestricted) return;
-    const nextName = window.prompt(renameColumnLabel, column.label);
+    const nextName = window.prompt(renameColumnLabel, column.value);
     const trimmedName = String(nextName ?? "").trim();
-    if (!trimmedName || trimmedName === column.key || existingColumnKeys.has(trimmedName)) return;
+    if (!trimmedName || trimmedName === column.value || existingColumnValues.has(trimmedName)) return;
 
+    const nextItem = { ...column.raw, value: trimmedName };
+    if (!(await runOperationCallback(onRenameColumn, nextItem, column.raw))) return;
     const nextColumns = (activeColumns || []).map((item, index) => {
       const current = normalizeItem(item, index);
-      return current.key === column.key ? renameItem(item, index, trimmedName) : item;
+      return current.id === column.id ? renameItem(item, index, trimmedName) : item;
     });
-    updateColumns(nextColumns, { type: "rename", item: column.raw, key: column.key, nextKey: trimmedName });
-
-    const nextValues = renameColumnValues(valuesRef.current, column.key, trimmedName);
-    valuesRef.current = nextValues;
-    onChange(nextValues, { column: column.raw, columnKey: column.key, nextColumnKey: trimmedName, renameColumn: true });
-    setSelectedCells((current) =>
-      Object.fromEntries(
-        Object.entries(current).map(([cellKey, cell]) => {
-          if (cell.columnKey !== column.key) return [cellKey, cell];
-          const nextCell = { ...cell, columnKey: trimmedName };
-          return [createCellKey(cell.rowKey, trimmedName), nextCell];
-        })
-      )
-    );
+    updateColumns(nextColumns, { type: "rename", item: column.raw, nextItem, key: column.id });
+    onChange(valuesRef.current, { column: column.raw, nextColumn: nextItem, columnKey: column.id, renameColumn: true });
     setHeaderMenu(null);
   };
 
@@ -454,9 +455,9 @@ export default function TwoDimensionalInputTable({
         const row = rowItems[rowIndex];
         const column = columnItems[columnIndex];
         if (!row || !column) continue;
-        nextSelection[createCellKey(row.key, column.key)] = {
-          rowKey: row.key,
-          columnKey: column.key,
+        nextSelection[createCellKey(row.id, column.id)] = {
+          rowKey: row.id,
+          columnKey: column.id,
         };
       }
     }
@@ -477,12 +478,12 @@ export default function TwoDimensionalInputTable({
   };
 
   const selectCell = (row, column, { updateExisting = false } = {}) => {
-    const cellKey = createCellKey(row.key, column.key);
+    const cellKey = createCellKey(row.id, column.id);
     const wasSelected = Boolean(selectedCells[cellKey]);
 
     setSelectedCells((current) => {
       if (current[cellKey]) return current;
-      return { ...current, [cellKey]: { rowKey: row.key, columnKey: column.key } };
+      return { ...current, [cellKey]: { rowKey: row.id, columnKey: column.id } };
     });
 
     if (batchValue !== "" && (!wasSelected || updateExisting)) {
@@ -499,14 +500,17 @@ export default function TwoDimensionalInputTable({
     });
   };
 
-  const handleBatchValueChange = (event) => {
-    const nextValue = event.target.value;
+  const updateBatchValue = (nextValue) => {
     setBatchValue(nextValue);
 
     const cellKeys = Object.keys(selectedCells);
     if (cellKeys.length) {
       updateCells(cellKeys, nextValue);
     }
+  };
+
+  const handleBatchValueChange = (event) => {
+    updateBatchValue(event.target.value);
   };
 
   const clearSelected = () => {
@@ -529,14 +533,16 @@ export default function TwoDimensionalInputTable({
   const selectedCount = Object.keys(selectedCells).length;
   const canAddRow = rowNameRestricted
     ? Boolean(newRowName) && !existingRowKeys.has(newRowName)
-    : Boolean(newRowName.trim()) && !existingRowKeys.has(newRowName.trim());
+    : Boolean(newRowName.trim()) && !existingRowKeys.has(newRowName.trim()) && !existingRowValues.has(newRowName.trim());
   const canAddColumn = columnNameRestricted
     ? Boolean(newColumnName) && !existingColumnKeys.has(newColumnName)
-    : Boolean(newColumnName.trim()) && !existingColumnKeys.has(newColumnName.trim());
+    : Boolean(newColumnName.trim()) &&
+      !existingColumnKeys.has(newColumnName.trim()) &&
+      !existingColumnValues.has(newColumnName.trim());
   const canRenameRows = allowRenameRows && !rowNameRestricted;
   const canRenameColumns = allowRenameColumns && !columnNameRestricted;
-  const activeMenuColumn = headerMenu?.type === "column" ? columnItems.find((column) => column.key === headerMenu.key) : null;
-  const activeMenuRow = headerMenu?.type === "row" ? rowItems.find((row) => row.key === headerMenu.key) : null;
+  const activeMenuColumn = headerMenu?.type === "column" ? columnItems.find((column) => column.id === headerMenu.key) : null;
+  const activeMenuRow = headerMenu?.type === "row" ? rowItems.find((row) => row.id === headerMenu.key) : null;
 
   return (
     <div ref={rootRef} className={`two-dimensional-input ${className}`.trim()}>
@@ -556,16 +562,27 @@ export default function TwoDimensionalInputTable({
 
         {activeMode === "batch" ? (
           <div className="two-dimensional-batch-tools">
-            <label className="two-dimensional-batch-input">
-              <span>{batchInputLabel}</span>
-              <input
-                className="input input-bordered input-sm"
-                type={inputType}
-                value={batchValue}
-                onChange={handleBatchValueChange}
-                {...batchInputProps}
-              />
-            </label>
+            <div className="two-dimensional-batch-value">
+              <label className="two-dimensional-batch-input">
+                <span>{batchInputLabel}</span>
+                <input
+                  className="input input-bordered input-sm"
+                  type={allowDateTimeFormat ? "text" : inputType}
+                  value={batchValue}
+                  onChange={handleBatchValueChange}
+                  {...batchInputProps}
+                />
+              </label>
+              {allowDateTimeFormat ? (
+                <DateTimeFormatSelector
+                  className="two-dimensional-date-time-selector"
+                  value={batchValue}
+                  onChange={updateBatchValue}
+                  name="two-dimensional-batch-date-time-format"
+                  label={dateTimeFormatLabel}
+                />
+              ) : null}
+            </div>
             <button className="btn btn-sm" type="button" onClick={clearSelected}>
               <Icon name="trash" />
               {clearSelectedLabel}
@@ -574,6 +591,8 @@ export default function TwoDimensionalInputTable({
           </div>
         ) : null}
       </div>
+
+      {operationError ? <div className="alert alert-error two-dimensional-error">{operationError}</div> : null}
 
       {allowAddColumns ? (
         <div className="two-dimensional-column-actions">
@@ -585,8 +604,8 @@ export default function TwoDimensionalInputTable({
             >
               <option value="">{columnNamePlaceholder}</option>
               {availableColumnOptions.map((column) => (
-                <option key={column.key} value={column.key}>
-                  {column.label}
+                <option key={column.id} value={column.id}>
+                  {column.value}
                 </option>
               ))}
             </select>
@@ -614,13 +633,13 @@ export default function TwoDimensionalInputTable({
             <tr>
               <th>{cornerLabel}</th>
               {columnItems.map((column) => (
-                <th key={column.key}>
+                <th key={column.id}>
                   <button
                     className="two-dimensional-header-button"
                     type="button"
-                    onClick={(event) => openHeaderMenu("column", column.key, event)}
+                    onClick={(event) => openHeaderMenu("column", column.id, event)}
                   >
-                    {column.label}
+                    {column.value}
                   </button>
                 </th>
               ))}
@@ -628,30 +647,30 @@ export default function TwoDimensionalInputTable({
           </thead>
           <tbody>
             {rowItems.map((row, rowIndex) => (
-              <tr key={row.key}>
+              <tr key={row.id}>
                 <th>
                   <button
                     className="two-dimensional-header-button"
                     type="button"
-                    onClick={(event) => openHeaderMenu("row", row.key, event)}
+                    onClick={(event) => openHeaderMenu("row", row.id, event)}
                   >
-                    {row.label}
+                    {row.value}
                   </button>
                 </th>
                 {columnItems.map((column, columnIndex) => {
-                  const value = getCellValue(values, row.key, column.key);
-                  const cellKey = createCellKey(row.key, column.key);
+                  const value = getCellValue(values, row.id, column.id);
+                  const cellKey = createCellKey(row.id, column.id);
                   const selected = Boolean(selectedCells[cellKey]);
                   const validation = getValidationResult(validate, value, {
                     row: row.raw,
                     column: column.raw,
-                    rowKey: row.key,
-                    columnKey: column.key,
+                    rowKey: row.id,
+                    columnKey: column.id,
                   });
 
                   return (
                     <td
-                      key={column.key}
+                      key={column.id}
                       className={[
                         selected ? "selected" : "",
                         validation.valid ? "" : "invalid",
@@ -659,7 +678,7 @@ export default function TwoDimensionalInputTable({
                       onMouseDown={(event) => {
                         if (activeMode !== "batch" || event.button !== 0) return;
                         event.preventDefault();
-                        const cellKey = createCellKey(row.key, column.key);
+                        const cellKey = createCellKey(row.id, column.id);
                         pointerStartRef.current = {
                           cellKey,
                           wasSelected: Boolean(selectedCells[cellKey]),
@@ -724,8 +743,8 @@ export default function TwoDimensionalInputTable({
             >
               <option value="">{rowNamePlaceholder}</option>
               {availableRowOptions.map((row) => (
-                <option key={row.key} value={row.key}>
-                  {row.label}
+                <option key={row.id} value={row.id}>
+                  {row.value}
                 </option>
               ))}
             </select>

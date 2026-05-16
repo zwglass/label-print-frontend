@@ -255,9 +255,10 @@ export default function LabelPage({ type }) {
     setLabel((current) => ({ ...current, lensPowerRows: rows }));
   };
 
-  const updateFeatureAssociation = ({ feature1_data, feature1_association_data }) => {
+  const updateFeatureAssociation = ({ texts, feature1_data, feature1_association_data }) => {
     setLabel((current) => ({
       ...current,
+      texts: Array.isArray(texts) ? texts : current.texts,
       features_data: {
         ...(current.features_data || {}),
         feature1_data,
@@ -270,7 +271,7 @@ export default function LabelPage({ type }) {
 
   const addText = () => {
     setLabel((current) => {
-      const nextText = createText(current);
+      const nextText = createText(current, undefined, false, { language });
       setSelectedTextIndex(current.texts.length);
       return { ...current, texts: [...current.texts, nextText] };
     });

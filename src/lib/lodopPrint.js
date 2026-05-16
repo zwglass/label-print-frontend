@@ -1,9 +1,13 @@
 import { appConfig } from "@/lib/config";
+import { calculateTextWidth, removeVariableBraces } from "@/lib/labelModels";
 
 let clodopLoadingPromise = null;
 
 const barcodeLodopTypes = {
   CODE128: "128Auto",
+  CODE128A: "128A",
+  CODE128B: "128B",
+  CODE128C: "128C",
   code128A: "128A",
   code128B: "128B",
   code128C: "128C",
@@ -14,6 +18,8 @@ const barcodeLodopTypes = {
   codabar: "Codabar",
   CODABAR: "Codabar",
 };
+
+const qrTipVerticalGapMm = -5;
 
 function mm(value, fallback = 0) {
   const numberValue = Number(value);
@@ -96,8 +102,11 @@ function addLodopText(lodop, text) {
     mm(text.x, 0),
     mm(text.width, 20),
     mm(height, 4),
-    String(text.value ?? "")
+    removeVariableBraces(text.value)
   );
+  if (text.align === "center") {
+    lodop.SET_PRINT_STYLEA(0, "Alignment", 2);
+  }
 }
 
 function addLodopQrCode(lodop, qrCode) {
@@ -110,19 +119,24 @@ function addLodopQrCode(lodop, qrCode) {
     mm(qrCode.size, 14),
     mm(qrCode.size, 14),
     "QRCode",
-    String(qrCode.value || " ")
+    removeVariableBraces(qrCode.value || " ")
   );
-  lodop.SET_PRINT_STYLEA(0, "QRCodeVersion", 1);
 
   if (qrCode.tip) {
+    const qrX = Number(qrCode.x) || 0;
+    const qrY = Number(qrCode.y) || 0;
+    const qrSize = Number(qrCode.size) || 14;
+    const tipWidth = Math.max(qrSize, calculateTextWidth(qrCode.tip, qrSize));
+
     addLodopText(lodop, {
       value: qrCode.tip,
-      x: Number(qrCode.x) || 0,
-      y: (Number(qrCode.y) || 0) + (Number(qrCode.size) || 14) + 1,
-      width: Number(qrCode.size) || 14,
+      x: qrX + (qrSize - tipWidth) / 2,
+      y: qrY + qrSize + qrTipVerticalGapMm,
+      width: tipWidth,
       fontSize: Number(qrCode.tipFontSize) || 9,
       bold: false,
       rotate: 0,
+      align: "center",
     });
   }
 }
@@ -139,11 +153,11 @@ function addLodopBarcode(lodop, barcode) {
     mm(barcode.width, 30),
     mm(barcode.height, 20),
     barcodeLodopTypes[barcode.type] || "128Auto",
-    String(barcode.value || " ")
+    removeVariableBraces(barcode.value || " ")
   );
 }
 
-export function sendLabelToLodop(lodop, label, printerIndex, mode = "print", copies = 1) {
+function prepareLabelPrint(lodop, label, printerIndex, copies = 1) {
   lodop.PRINT_INIT(label.name || "");
   lodop.SET_PRINT_PAGESIZE(1, mm(label.width, 80), mm(label.height, 50), "CreateCustomPage");
 
@@ -153,10 +167,72 @@ export function sendLabelToLodop(lodop, label, printerIndex, mode = "print", cop
 
   lodop.SET_PRINTER_INDEX(Number(printerIndex) || 0);
   lodop.SET_PRINT_COPIES(Math.max(Number(copies) || 1, 1));
+}
+
+function isLodopReturnSuccess(value) {
+  if (value === false || value === null || value === undefined) return false;
+  if (typeof value === "number") return value !== 0;
+  const normalized = String(value).trim().toLowerCase();
+  return normalized !== "" && normalized !== "0" && normalized !== "false";
+}
+
+function runLodopCommandAsync(lodop, command) {
+  if (!lodop.CVERSION) {
+    const result = command();
+    return Promise.resolve(result === undefined ? true : isLodopReturnSuccess(result));
+  }
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const previousOnReturn = lodop.On_Return;
+    const timeoutId = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      lodop.On_Return = previousOnReturn;
+      reject(new Error("C-Lodop print command timed out."));
+    }, 30000);
+
+    lodop.On_Return = (taskId, value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutId);
+      lodop.On_Return = previousOnReturn;
+      resolve(isLodopReturnSuccess(value));
+    };
+
+    try {
+      command();
+    } catch (error) {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutId);
+      lodop.On_Return = previousOnReturn;
+      reject(error);
+    }
+  });
+}
+
+export function sendLabelToLodop(lodop, label, printerIndex, mode = "print", copies = 1) {
+  prepareLabelPrint(lodop, label, printerIndex, copies);
 
   if (mode === "preview") {
     lodop.PREVIEW();
   } else {
     lodop.PRINT();
   }
+}
+
+export async function sendLabelToLodopAsync(lodop, label, printerIndex, mode = "print", copies = 1) {
+  prepareLabelPrint(lodop, label, printerIndex, copies);
+
+  const ok = await runLodopCommandAsync(lodop, () => {
+    if (mode === "preview") return lodop.PREVIEW();
+    return lodop.PRINT();
+  });
+
+  if (!ok) {
+    throw new Error("C-Lodop print command failed.");
+  }
+
+  return ok;
 }

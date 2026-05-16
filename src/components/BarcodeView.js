@@ -15,8 +15,8 @@ export default function BarcodeView({ barcode, onSelect }) {
       setInvalid(false);
       JsBarcode(svgRef.current, barcode.value || "123456", {
         format: barcode.type || "CODE128",
-        width: Number(barcode.barWidth) || 1,
-        height: 40,
+        width: 1,
+        height: Number(barcode.height) || 20,
         displayValue: true,
         fontSize: 12,
         margin: 0,
@@ -24,7 +24,7 @@ export default function BarcodeView({ barcode, onSelect }) {
     } catch {
       setInvalid(true);
     }
-  }, [barcode.value, barcode.type, barcode.barWidth]);
+  }, [barcode.value, barcode.type, barcode.height]);
 
   return (
     <div

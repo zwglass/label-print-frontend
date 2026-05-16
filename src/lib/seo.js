@@ -43,6 +43,12 @@ export const pages = {
     description:
       "Learn how to print labels with ZWGlass Label Print, install LODOP/C-Lodop, refresh local printers, edit label templates, and use browser or direct local printing.",
   },
+  guestbook: {
+    path: "/guestbook/",
+    title: "Guestbook | ZWGlass Label Print",
+    description:
+      "Sign the ZWGlass Label Print guestbook, leave a short message, and read approved notes from other visitors.",
+  },
 };
 
 export function absoluteUrl(path = "/") {

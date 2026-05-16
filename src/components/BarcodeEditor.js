@@ -16,11 +16,19 @@ const barcodeTypes = [
 
 export default function BarcodeEditor({ barcode, onChange, onClose, frameStyle, arrowStyle, onMeasure }) {
   const { t } = useI18n();
+  const barcodeEditorFrameStyle = {
+    ...frameStyle,
+    width: "min(480px, calc(100vw - 32px))",
+  };
+  const wideEditorRowStyle = { gridTemplateColumns: "minmax(0, 1fr) minmax(0, 300px)" };
+  const widePositionLabelStyle = { gridTemplateColumns: "max-content minmax(0, 136px)" };
+  const widePositionInputStyle = { width: "100%", minWidth: 0 };
 
   return (
-    <FloatingEditorFrame title={t("barcodeEditor")} onClose={onClose} frameStyle={frameStyle} arrowStyle={arrowStyle} onMeasure={onMeasure}>
+    <FloatingEditorFrame title={t("barcodeEditor")} onClose={onClose} frameStyle={barcodeEditorFrameStyle} arrowStyle={arrowStyle} onMeasure={onMeasure}>
       <div className="editor-form barcode-editor-form">
-        <label>
+        <label className="editor-row" style={wideEditorRowStyle}>
+          {t("barcodeType")}
           <select
             className="select select-bordered select-sm"
             value={barcode.type || "CODE128"}
@@ -31,7 +39,7 @@ export default function BarcodeEditor({ barcode, onChange, onClose, frameStyle, 
             ))}
           </select>
         </label>
-        <label>
+        <label className="editor-row" style={wideEditorRowStyle}>
           {t("barcodeValue")}
           <input
             className="input input-primary input-sm"
@@ -40,19 +48,19 @@ export default function BarcodeEditor({ barcode, onChange, onClose, frameStyle, 
             onChange={(event) => onChange({ value: event.target.value })}
           />
         </label>
-        <label>
+        <label className="editor-row" style={wideEditorRowStyle}>
           {t("barcodeWidth")}
           <input
             className="input input-primary input-sm"
             type="number"
             step="0.1"
             min="0.1"
-            value={barcode.barWidth}
-            placeholder={t("numberExample1")}
-            onChange={(event) => onChange({ barWidth: Number(event.target.value) || 1 })}
+            value={barcode.width}
+            placeholder={t("numberExample30")}
+            onChange={(event) => onChange({ width: Number(event.target.value) || 1 })}
           />
         </label>
-        <label>
+        <label className="editor-row" style={wideEditorRowStyle}>
           {t("barcodeHeight")}
           <input
             className="input input-primary input-sm"
@@ -63,26 +71,30 @@ export default function BarcodeEditor({ barcode, onChange, onClose, frameStyle, 
             onChange={(event) => onChange({ height: Number(event.target.value) || 1 })}
           />
         </label>
-        <label>
-          {t("barcodeX")}
-          <input
-            className="input input-primary input-sm"
-            type="number"
-            value={barcode.x}
-            placeholder={t("numberExample20")}
-            onChange={(event) => onChange({ x: Number(event.target.value) || 0 })}
-          />
-        </label>
-        <label>
-          {t("barcodeY")}
-          <input
-            className="input input-primary input-sm"
-            type="number"
-            value={barcode.y}
-            placeholder={t("numberExample30")}
-            onChange={(event) => onChange({ y: Number(event.target.value) || 0 })}
-          />
-        </label>
+        <div className="editor-position-row">
+          <label style={widePositionLabelStyle}>
+            {t("barcodeX")}
+            <input
+              className="input input-primary input-sm"
+              style={widePositionInputStyle}
+              type="number"
+              value={barcode.x}
+              placeholder={t("numberExample20")}
+              onChange={(event) => onChange({ x: Number(event.target.value) || 0 })}
+            />
+          </label>
+          <label style={widePositionLabelStyle}>
+            {t("barcodeY")}
+            <input
+              className="input input-primary input-sm"
+              style={widePositionInputStyle}
+              type="number"
+              value={barcode.y}
+              placeholder={t("numberExample30")}
+              onChange={(event) => onChange({ y: Number(event.target.value) || 0 })}
+            />
+          </label>
+        </div>
       </div>
     </FloatingEditorFrame>
   );
