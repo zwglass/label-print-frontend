@@ -314,44 +314,6 @@ export function findLensPowerRow(label, sph) {
     };
 }
 
-// export function updateLensLabelPower(label, sph, cyl) {
-//     const powerRow = findLensPowerRow(label, sph);
-//     const thickness = powerRow.thickness || "1.2";
-//     const diameter = powerRow.diameter || "72";
-
-//     const lensPrintLabels = {
-//         ...label,
-//         texts: label.texts.map((text, index, texts) => {
-//             const testSphCylValue = String(text.value ?? "").trim();
-//             if (/^S\s*[:：]/i.test(testSphCylValue)) return {
-//                 ...text,
-//                 value: `S:${sph}`
-//             };
-//             if (/^C\s*[:：]/i.test(testSphCylValue)) return {
-//                 ...text,
-//                 value: `C:${cyl}`
-//             };
-//             // if (/^S:[+-]?\d/.test(text.value)) return { ...text, value: `S:${sph}` };
-//             // if (/^C:[+-]?\d/.test(text.value)) return { ...text, value: `C:${cyl}` };
-//             const prevValue = texts[index - 1]?.value;
-//             if (prevValue === "中心厚度:" || prevValue === "CT:") return {
-//                 ...text,
-//                 value: `${thickness}mm`
-//             };
-//             if (prevValue === "直径:" || prevValue === "Dia:") return {
-//                 ...text,
-//                 value: `${diameter}mm`
-//             };
-//             return {
-//                 ...text
-//             };
-//         }),
-//     };
-
-//     // console.log("------ lensPrintLabels:\n", lensPrintLabels)
-//     return lensPrintLabels
-// }
-
 function getAssociatedTextKey(textValue) {
     const match = String(textValue ?? "").match(/^([^:：]+)\s*[:：]\s*(.*)$/);
     return match ? match[1].trim() : "";
@@ -554,11 +516,11 @@ export function createLensTexts(label, options = {}) {
         },
         { 
             value: "S: {-0.00}", 
-            specifiedParam: {display_title: false, feature_index: 1, x: 9, y:0, width: 15, fontSize: 10, bold: true} 
+            specifiedParam: {display_title: false, feature_index: 1, x: 7, y:0, width: 18, fontSize: 10, bold: true} 
         },
         { 
             value: "C: {-0.00}", 
-            specifiedParam: {display_title: false, feature_index: 2, x: 25, y:0, width: 15, fontSize: 10, bold: true} 
+            specifiedParam: {display_title: false, feature_index: 2, x: 25, y:0, width: 18, fontSize: 10, bold: true} 
         },
         { 
             value: english ? `RI: ${refractiveIndex}` : `折射率: ${refractiveIndex}`, 
@@ -663,7 +625,7 @@ export function createLensTexts(label, options = {}) {
         const multiFocusParams = [
             { 
                 value: "R", 
-                specifiedParam: {x: 2, y: 0, width: 7, fontSize: 11, bold: true} 
+                specifiedParam: {x: 1, y: 0, width: 7, fontSize: 11, bold: true} 
             },
             { 
                 value: "A: 0", 
@@ -671,7 +633,7 @@ export function createLensTexts(label, options = {}) {
             },
             { 
                 value: "ADD: +1.00", 
-                specifiedParam: {x: 58, y: 0, width: 26, fontSize: 11, bold: true} 
+                specifiedParam: {x: 57, y: 0, width: 26, fontSize: 11, bold: true} 
             },
         ]
         for (const item of multiFocusParams) {
