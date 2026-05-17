@@ -575,7 +575,7 @@ export default function LabelPage({ type }) {
 
           <LabelToolbar
             isLens={type === "lens"}
-            showFeatureAssociation={type === "common"}
+            showFeatureAssociation={true}
             editText={editText}
             onToggleEdit={(checked) => {
               setEditText(checked);
@@ -603,7 +603,7 @@ export default function LabelPage({ type }) {
             onEditSize={() => setSizeOpen(true)}
             onEditLensPower={() => setLensPowerOpen(true)}
             onEditFeatureAssociation={() => {
-              if (type === "common") setFeatureAssociationOpen(true);
+              setFeatureAssociationOpen(true);
             }}
           />
 
@@ -723,7 +723,7 @@ export default function LabelPage({ type }) {
         onNotify={notify}
       />
       <FeatureAssociationDialog
-        open={type === "common" && featureAssociationOpen}
+        open={featureAssociationOpen}
         label={label}
         onCancel={() => setFeatureAssociationOpen(false)}
         onSave={updateFeatureAssociation}

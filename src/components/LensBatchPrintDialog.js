@@ -1,95 +1,195 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
-import { createDiopterValues, lensPowerSigns, updateLensLabelPower } from "@/lib/labelModels";
-import { getReadyLodop, sendLabelToLodop } from "@/lib/lodopPrint";
+import { useEffect, useMemo, useState } from "react";
+import { createDiopterValues, lensPowerSigns, updateLensBatchLabel } from "@/lib/labelModels";
+import { getReadyLodop, sendLabelToLodopAsync } from "@/lib/lodopPrint";
 import { useI18n } from "@/lib/i18n";
+import TwoDimensionalInputTable, { getTwoDimensionalInputData, getValidationResult } from "./TwoDimensionalInputTable";
 
 const maxCylOptions = [200, 400, 600];
+const maxSph = 30;
+const maxColumnCyl = 8;
+
+function createDimensionItems(maxValue) {
+  return createDiopterValues(maxValue).map((value) => ({ id: value, value }));
+}
+
+function isQuantityValueValid(value) {
+  if (value === "") return true;
+  if (!/^\d+$/.test(String(value))) return false;
+  const count = Number(value);
+  return Number.isInteger(count) && count >= 0 && count <= 100;
+}
+
+function normalizeBatchValues(rows, columns, sourceValues = {}) {
+  return rows.reduce((nextValues, row) => {
+    nextValues[row.id] = columns.reduce((rowValues, column) => {
+      const value = sourceValues?.[row.id]?.[column.id] ?? "";
+      rowValues[column.id] = isQuantityValueValid(value) ? String(value) : "";
+      return rowValues;
+    }, {});
+    return nextValues;
+  }, {});
+}
+
+function sanitizeQuantityValues(nextValues = {}, previousValues = {}) {
+  return Object.fromEntries(
+    Object.entries(nextValues || {}).map(([rowKey, rowValues]) => [
+      rowKey,
+      Object.fromEntries(
+        Object.entries(rowValues || {}).map(([columnKey, value]) => [
+          columnKey,
+          isQuantityValueValid(value) ? String(value) : previousValues?.[rowKey]?.[columnKey] ?? "",
+        ])
+      ),
+    ])
+  );
+}
+
+function removeRowValues(values = {}, rowId) {
+  const nextValues = { ...(values || {}) };
+  delete nextValues[rowId];
+  return nextValues;
+}
+
+function removeColumnValues(values = {}, columnId) {
+  return Object.fromEntries(
+    Object.entries(values || {}).map(([rowId, rowValues]) => {
+      const nextRowValues = { ...(rowValues || {}) };
+      delete nextRowValues[columnId];
+      return [rowId, nextRowValues];
+    })
+  );
+}
+
+function normalizeDimensionItem(item, index) {
+  if (item && typeof item === "object") {
+    const id = item.id ?? item.key ?? item.value ?? index;
+    const value = item.value ?? item.label ?? item.key ?? "";
+    return { ...item, id: String(id), value: String(value) };
+  }
+
+  const value = String(item ?? "");
+  return { id: value || String(index), value };
+}
+
+function normalizeDimensionItems(items = []) {
+  return items.map(normalizeDimensionItem);
+}
+
+function getFeatureDimensionItems(label, key) {
+  return normalizeDimensionItems(Array.isArray(label?.features_data?.[key]) ? label.features_data[key] : []);
+}
+
+function filterDimensionItemsByMaxValue(items, maxValue) {
+  return normalizeDimensionItems(items).filter((item) => Number(item.value) <= maxValue);
+}
 
 export default function LensBatchPrintDialog({ open, label, printerIndex = 0, onClose, onPrint, onNotify = () => {} }) {
   const { t } = useI18n();
   const [maxCyl, setMaxCyl] = useState(200);
   const [signIndex, setSignIndex] = useState(0);
-  const [quantities, setQuantities] = useState({});
+  const [rows, setRows] = useState([]);
+  const [columns, setColumns] = useState([]);
+  const [values, setValues] = useState({});
   const [printing, setPrinting] = useState(false);
-  const quantityInputRefs = useRef({});
 
-  const sphValues = useMemo(() => createDiopterValues(12), []);
-  const cylValues = useMemo(() => createDiopterValues(maxCyl / 100), [maxCyl]);
+  const featureRows = useMemo(() => getFeatureDimensionItems(label, "feature1_data"), [label]);
+  const featureColumns = useMemo(() => getFeatureDimensionItems(label, "feature2_data"), [label]);
+  const rowOptions = useMemo(
+    () => (featureRows.length ? filterDimensionItemsByMaxValue(featureRows, maxSph) : createDimensionItems(maxSph)),
+    [featureRows]
+  );
+  const columnOptions = useMemo(() => {
+    const maxValue = Math.min(maxColumnCyl, maxCyl / 100);
+    return featureColumns.length ? filterDimensionItemsByMaxValue(featureColumns, maxValue) : createDimensionItems(maxValue);
+  }, [featureColumns, maxCyl]);
   const sign = lensPowerSigns[signIndex] || lensPowerSigns[0];
+
+  useEffect(() => {
+    if (!open) return;
+
+    const maxColumnValue = Math.min(maxColumnCyl, maxCyl / 100);
+    const nextRows = featureRows.length ? filterDimensionItemsByMaxValue(featureRows, maxSph) : createDimensionItems(maxSph);
+    const nextColumns = featureColumns.length
+      ? filterDimensionItemsByMaxValue(featureColumns, maxColumnValue)
+      : createDimensionItems(maxColumnValue);
+    setRows(nextRows);
+    setColumns(nextColumns);
+    setValues((current) => normalizeBatchValues(nextRows, nextColumns, current));
+  }, [featureColumns, featureRows, maxCyl, open]);
 
   if (!open) return null;
 
-  const updateQuantity = (sph, cyl, value) => {
-    const nextValue = value === "" ? "" : Math.min(Math.max(Math.floor(Number(value) || 0), 0), 100);
-    setQuantities((current) => ({
-      ...current,
-      [sph]: {
-        ...(current[sph] || {}),
-        [cyl]: nextValue,
-      },
-    }));
-  };
+  const quantityValidate = (value) => (isQuantityValueValid(value) ? true : t("batchQuantityInvalid"));
 
   const clearQuantities = () => {
-    setQuantities({});
+    setValues(normalizeBatchValues(rows, columns, {}));
   };
 
-  const focusQuantityInput = (rowIndex, colIndex) => {
-    quantityInputRefs.current[`${rowIndex}-${colIndex}`]?.focus();
+  const updateRows = (nextRows) => {
+    setRows(nextRows);
+    setValues((current) => normalizeBatchValues(nextRows, columns, current));
   };
 
-  const handleQuantityKeyDown = (rowIndex, colIndex, event) => {
-    const moves = {
-      ArrowUp: [-1, 0],
-      ArrowDown: [1, 0],
-      ArrowLeft: [0, -1],
-      ArrowRight: [0, 1],
-    };
-    const move = moves[event.key];
+  const updateColumns = (nextColumns) => {
+    setColumns(nextColumns);
+    setValues((current) => normalizeBatchValues(rows, nextColumns, current));
+  };
 
-    if (!move) return;
+  const handleDeleteRow = (item) => {
+    setValues((current) => removeRowValues(current, item.id));
+    return { status: true, error: "" };
+  };
 
-    event.preventDefault();
-    const nextRowIndex = rowIndex + move[0];
-    const nextColIndex = colIndex + move[1];
+  const handleDeleteColumn = (item) => {
+    setValues((current) => removeColumnValues(current, item.id));
+    return { status: true, error: "" };
+  };
 
-    if (
-      nextRowIndex < 0 ||
-      nextRowIndex >= sphValues.length ||
-      nextColIndex < 0 ||
-      nextColIndex >= cylValues.length
-    ) {
-      return;
-    }
-
-    focusQuantityInput(nextRowIndex, nextColIndex);
+  const updateMaxCyl = (value) => {
+    const maxValue = Math.min(maxColumnCyl, value / 100);
+    const nextColumns = featureColumns.length ? filterDimensionItemsByMaxValue(featureColumns, maxValue) : createDimensionItems(maxValue);
+    setMaxCyl(value);
+    setColumns(nextColumns);
+    setValues(normalizeBatchValues(rows, nextColumns, {}));
   };
 
   const createPrintJobs = () => {
     const jobs = [];
-    sphValues.forEach((sph) => {
-      cylValues.forEach((cyl) => {
-        const count = Number(quantities[sph]?.[cyl]) || 0;
-        if (count < 1) return;
-        const sphText = `${sign.sph}${sph}`;
-        const cylText = `${sign.cyl}${cyl}`;
-        jobs.push({
-          label: updateLensLabelPower(label, sphText, cylText),
-          count,
-          sph: sphText,
-          cyl: cylText,
-        });
+    for (const cell of getTwoDimensionalInputData({ rows, columns, values })) {
+      const validation = getValidationResult(quantityValidate, cell.value, cell);
+      if (!validation.valid) {
+        return { error: validation.message || t("batchQuantityInvalid") };
+      }
+
+      const count = Number(cell.value) || 0;
+      if (count < 1) continue;
+
+      // const feature1 = `${sign.sph}${cell.row.value}`;
+      // const feature2 = `${sign.cyl}${cell.column.value}`;
+
+      const currentLabel = updateLensBatchLabel(label, cell.row, cell.column, sign);
+
+      jobs.push({
+        label: currentLabel,
+        count,
+        feature1: cell.row.value,
+        feature2: cell.column.value,
       });
-    });
-    return jobs;
+    }
+    return { jobs };
   };
 
   const lensMultiplePrint = async () => {
-    const jobs = createPrintJobs();
+    const { jobs, error } = createPrintJobs();
+    if (error) {
+      onNotify(error, "warning");
+      return;
+    }
+
     const totalCount = jobs.reduce((sum, job) => sum + job.count, 0);
-    if (!jobs.length) {
+    if (!jobs.length || totalCount < 1) {
       onNotify(t("batchQuantityRequired"), "warning");
       return;
     }
@@ -97,14 +197,18 @@ export default function LensBatchPrintDialog({ open, label, printerIndex = 0, on
     setPrinting(true);
     try {
       const lodop = await getReadyLodop();
-      jobs.forEach((job, index) => {
-        setTimeout(() => {
-          sendLabelToLodop(lodop, job.label, printerIndex, "print", job.count);
-        }, index * 1000);
+      for (const job of jobs) {
+        await sendLabelToLodopAsync(lodop, job.label, printerIndex, "print", job.count);
+      }
+      onPrint({
+        rows,
+        columns,
+        values,
+        jobCount: jobs.length,
+        totalCount,
       });
-      onPrint({ jobCount: jobs.length, totalCount });
     } catch (error) {
-      onNotify(error.message || t("batchPrintFail"), "error");
+      onNotify(error.message || t("lodopPrintFail"), "error");
     } finally {
       setPrinting(false);
     }
@@ -134,10 +238,7 @@ export default function LensBatchPrintDialog({ open, label, printerIndex = 0, on
                     type="radio"
                     name="lens-max-cyl"
                     checked={maxCyl === value}
-                    onChange={() => {
-                      setMaxCyl(value);
-                      clearQuantities();
-                    }}
+                    onChange={() => updateMaxCyl(value)}
                   />
                   {value}
                 </label>
@@ -162,46 +263,39 @@ export default function LensBatchPrintDialog({ open, label, printerIndex = 0, on
           </div>
 
           <div className="lens-batch-table-wrap">
-            <table className="lens-batch-table">
-              <thead>
-                <tr>
-                  <th>SPH-CYL</th>
-                  {cylValues.map((cyl) => (
-                    <th key={cyl}>{cyl}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {sphValues.map((sph, rowIndex) => (
-                  <tr key={sph}>
-                    <th>{sph}</th>
-                    {cylValues.map((cyl, colIndex) => (
-                      <td key={cyl}>
-                        <input
-                          ref={(element) => {
-                            if (element) {
-                              quantityInputRefs.current[`${rowIndex}-${colIndex}`] = element;
-                            } else {
-                              delete quantityInputRefs.current[`${rowIndex}-${colIndex}`];
-                            }
-                          }}
-                          className="input input-ghost validator"
-                          type="number"
-                          min="0"
-                          max="100"
-                          step="1"
-                          title={t("quantityTitle")}
-                          // placeholder="0-100"
-                          value={quantities[sph]?.[cyl] ?? ""}
-                          onChange={(event) => updateQuantity(sph, cyl, event.target.value)}
-                          onKeyDown={(event) => handleQuantityKeyDown(rowIndex, colIndex, event)}
-                        />
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <TwoDimensionalInputTable
+              rows={rows}
+              columns={columns}
+              values={values}
+              onChange={(nextValues) => setValues((current) => sanitizeQuantityValues(nextValues, current))}
+              onRowsChange={updateRows}
+              onColumnsChange={updateColumns}
+              onDeleteRow={handleDeleteRow}
+              onDeleteColumn={handleDeleteColumn}
+              validate={quantityValidate}
+              inputType="number"
+              inputProps={{ min: "0", max: "100", step: "1" }}
+              batchInputProps={{ min: "0", max: "100", step: "1" }}
+              cornerLabel="SPH-CYL"
+              normalModeLabel={t("normalInput")}
+              batchModeLabel={t("batchInput")}
+              batchInputLabel={t("unifiedInput")}
+              clearSelectedLabel={t("clearSelected")}
+              addRowLabel={t("addRow")}
+              addColumnLabel={t("addColumn")}
+              deleteRowLabel={t("deleteRow")}
+              deleteColumnLabel={t("deleteColumn")}
+              renameRowLabel={t("renameRow")}
+              renameColumnLabel={t("renameColumn")}
+              cancelLabel={t("cancel")}
+              rowNamePlaceholder={t("rowName")}
+              columnNamePlaceholder={t("columnName")}
+              rowNameOptions={rowOptions}
+              columnNameOptions={columnOptions}
+              allowRenameRows={false}
+              allowRenameColumns={false}
+              className="lens-batch-dimensional"
+            />
           </div>
         </div>
       </div>

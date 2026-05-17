@@ -1,4 +1,5 @@
-import { formatDateTimeToken } from "@/lib/dateTime";
+import { formatDateTimeToken, getCurrentDateTimeFormats } from "@/lib/dateTime";
+
 
 export const defaultLabel = {
     /**
@@ -43,6 +44,27 @@ export const defaultLabel = {
         feature1_association_data: {},    // {feature1_data[index].id: {texts[index].id: string}}
     },
 };
+
+function cloneLabel(label) {
+    return {
+        ...label,
+        texts: (label.texts || []).map((text) => ({ ...text })),
+        qrCode: { ...(label.qrCode || {}) },
+        barcode: { ...(label.barcode || {}) },
+        lensPowerRows: (label.lensPowerRows || []).map((row) => ({ ...row })),
+        features_data: {
+            ...(label.features_data || {}),
+            feature1_data: (label.features_data?.feature1_data || []).map((item) => ({ ...item })),
+            feature2_data: (label.features_data?.feature2_data || []).map((item) => ({ ...item })),
+            feature1_association_data: Object.fromEntries(
+                Object.entries(label.features_data?.feature1_association_data || {}).map(([key, value]) => [
+                    key,
+                    { ...(value || {}) },
+                ])
+            ),
+        },
+    };
+}
 
 export function createLensPowerRows(thickness = "1.2", diameter = "72") {
     return Array.from({
@@ -292,43 +314,43 @@ export function findLensPowerRow(label, sph) {
     };
 }
 
-export function updateLensLabelPower(label, sph, cyl) {
-    const powerRow = findLensPowerRow(label, sph);
-    const thickness = powerRow.thickness || "1.2";
-    const diameter = powerRow.diameter || "72";
+// export function updateLensLabelPower(label, sph, cyl) {
+//     const powerRow = findLensPowerRow(label, sph);
+//     const thickness = powerRow.thickness || "1.2";
+//     const diameter = powerRow.diameter || "72";
 
-    const lensPrintLabels = {
-        ...label,
-        texts: label.texts.map((text, index, texts) => {
-            const testSphCylValue = String(text.value ?? "").trim();
-            if (/^S\s*[:：]/i.test(testSphCylValue)) return {
-                ...text,
-                value: `S:${sph}`
-            };
-            if (/^C\s*[:：]/i.test(testSphCylValue)) return {
-                ...text,
-                value: `C:${cyl}`
-            };
-            // if (/^S:[+-]?\d/.test(text.value)) return { ...text, value: `S:${sph}` };
-            // if (/^C:[+-]?\d/.test(text.value)) return { ...text, value: `C:${cyl}` };
-            const prevValue = texts[index - 1]?.value;
-            if (prevValue === "中心厚度:" || prevValue === "CT:") return {
-                ...text,
-                value: `${thickness}mm`
-            };
-            if (prevValue === "直径:" || prevValue === "Dia:") return {
-                ...text,
-                value: `${diameter}mm`
-            };
-            return {
-                ...text
-            };
-        }),
-    };
+//     const lensPrintLabels = {
+//         ...label,
+//         texts: label.texts.map((text, index, texts) => {
+//             const testSphCylValue = String(text.value ?? "").trim();
+//             if (/^S\s*[:：]/i.test(testSphCylValue)) return {
+//                 ...text,
+//                 value: `S:${sph}`
+//             };
+//             if (/^C\s*[:：]/i.test(testSphCylValue)) return {
+//                 ...text,
+//                 value: `C:${cyl}`
+//             };
+//             // if (/^S:[+-]?\d/.test(text.value)) return { ...text, value: `S:${sph}` };
+//             // if (/^C:[+-]?\d/.test(text.value)) return { ...text, value: `C:${cyl}` };
+//             const prevValue = texts[index - 1]?.value;
+//             if (prevValue === "中心厚度:" || prevValue === "CT:") return {
+//                 ...text,
+//                 value: `${thickness}mm`
+//             };
+//             if (prevValue === "直径:" || prevValue === "Dia:") return {
+//                 ...text,
+//                 value: `${diameter}mm`
+//             };
+//             return {
+//                 ...text
+//             };
+//         }),
+//     };
 
-    // console.log("------ lensPrintLabels:\n", lensPrintLabels)
-    return lensPrintLabels
-}
+//     // console.log("------ lensPrintLabels:\n", lensPrintLabels)
+//     return lensPrintLabels
+// }
 
 function getAssociatedTextKey(textValue) {
     const match = String(textValue ?? "").match(/^([^:：]+)\s*[:：]\s*(.*)$/);
@@ -474,7 +496,37 @@ export function updateCommonBatchLabel(label, feature1, feature2) {
     };
 }
 
-export function createLensTexts(options = {}) {
+export function updateLensBatchLabel(label, feature1, feature2, sign) {
+    const feature1Item = normalizeFeatureItem(feature1);
+    const feature2Item = normalizeFeatureItem(feature2);
+    const associationValues = label.features_data?.feature1_association_data?.[feature1Item.id] || null;
+
+    return {
+        ...label,
+        texts: (label.texts || []).map((text) => {
+            if (Number(text.feature_index || 0) === 1) return {
+                ...text,
+                value: removeVariableBraces(updateFeatureTextValue(text.value, `${sign.sph}${feature1Item.value}`))
+            };
+            if (Number(text.feature_index || 0) === 2) return {
+                ...text,
+                value: removeVariableBraces(updateFeatureTextValue(text.value, `${sign.cyl}${feature2Item.value}`))
+            };
+            if (associationValues && text.association === true && !text.display_title && Number(text.feature_index || 0) === 0) {
+                return {
+                    ...text,
+                    value: removeVariableBraces(updateAssociatedTextValue(text, associationValues))
+                };
+            }
+            return {
+                ...text,
+                value: removeVariableBraces(text.value)
+            };
+        }),
+    };
+}
+
+export function createLensTexts(label, options = {}) {
     const language = options.language || "zh";
     const english = isEnglishLanguage(language);
     const defaultGoodsName = english ? textValueTranslations["1.56超薄树脂防蓝光"] : "1.56超薄树脂防蓝光";
@@ -486,7 +538,87 @@ export function createLensTexts(options = {}) {
     const design = String(options.design ?? "").trim();
     const origin = String(options.origin ?? "").trim();
     const filmColor = String(options.filmColor ?? "").trim();
-    const dateText = new Date().toLocaleDateString(english ? "en-US" : "zh-CN");
+    // const dateText = new Date().toLocaleDateString(english ? "en-US" : "zh-CN");
+    
+    const columnLeftX = 2
+    const columnRightX = 42
+    const textWidth = 38
+    const textLabel = {
+        ...label,
+        texts: [],
+    };
+    const createTextsParam = [
+        { 
+            value: english ? `Product: ${goodsName}` : `品名: ${goodsName}`, 
+            specifiedParam: {display_title: true, feature_index: 0, x: columnLeftX, y: 5, width: 75, fontSize: 9, bold: true} 
+        },
+        { 
+            value: "S: {-0.00}", 
+            specifiedParam: {display_title: false, feature_index: 1, x: 9, y:0, width: 15, fontSize: 10, bold: true} 
+        },
+        { 
+            value: "C: {-0.00}", 
+            specifiedParam: {display_title: false, feature_index: 2, x: 25, y:0, width: 15, fontSize: 10, bold: true} 
+        },
+        { 
+            value: english ? `RI: ${refractiveIndex}` : `折射率: ${refractiveIndex}`, 
+            specifiedParam: {x: columnLeftX, y: 10, width: textWidth} 
+        },
+        { 
+            value: english ? `Trans.: Cat.0, UV-1` : `透射比: 0类、UV-1`, 
+            specifiedParam: {x: columnLeftX, y: 14, width: textWidth} 
+        },
+        { 
+            value: english ? `Abbe: Vd=${abbe}` : `阿贝数: Vd=${abbe}`, 
+            specifiedParam: {x: columnLeftX, y: 18, width: textWidth} 
+        },
+        { 
+            value: english ? "CT: {1.2mm}" : "中心厚度: {1.2mm}", 
+            specifiedParam: {x: columnLeftX, y:22, width: textWidth, association: true, association_name: english ? "CT" : "中心厚度"} 
+        },
+        { 
+            value: english ? `Dia: {${diameter}mm}` : `直径: {${diameter}mm}`, 
+            specifiedParam: {x: columnLeftX, y:26, width: textWidth, association: true, association_name: english ? "Dia" : "直径"} 
+        },
+        { 
+            value: english ? `MFG Date: {${getCurrentDateTimeFormats().date}}` : `生产日期: {${getCurrentDateTimeFormats().date}}`, 
+            specifiedParam: {x: columnLeftX, y:30, width: textWidth, association: true, association_name: english ? "MFG Date" : "生产日期"} 
+        },
+        { 
+            value: english ? `Standard: QB/T2506-2017` : `执行标准: QB/T2506-2017`, 
+            specifiedParam: {x: columnLeftX, y: 34, width: textWidth} 
+        },
+        { 
+            value: "GB10810.1-2005", 
+            specifiedParam: {x: columnLeftX, y: 37, width: textWidth} 
+        },
+        { 
+            value: "GB10810.3-2006", 
+            specifiedParam: {x: columnLeftX, y: 40, width: textWidth} 
+        },
+        { 
+            value: "GB10810.5-2012", 
+            specifiedParam: {x: columnLeftX, y: 43, width: textWidth} 
+        },
+        { 
+            value: english ? "Category: Eyewear" : "产品分类: 眼镜类", 
+            specifiedParam: {x: columnRightX, y: 10, width: textWidth} 
+        },
+        { 
+            value: english ? "Use: Vision Correction" : "产品用途: 视力矫正用", 
+            specifiedParam: {x: columnRightX, y: 14, width: textWidth} 
+        },
+        { 
+            value: english ? "Grade: Qualified" : "等级: 合格", 
+            specifiedParam: {x: columnRightX, y: 18, width: textWidth} 
+        },
+    ]
+
+    for (const item of createTextsParam) {
+        const currentText = createText(textLabel, item.value, false, options, item.specifiedParam)
+        textLabel.texts.push(currentText)
+    }
+
     const optionalSpecTexts = [{
             label: english ? "Coating:" : "镀膜情况:",
             value: coatingStatus,
@@ -513,329 +645,104 @@ export function createLensTexts(options = {}) {
         },
     ].filter(({
         value
-    }) => value).flatMap(({
-        label,
+    }) => value).forEach(({
+        label: specLabel,
         value,
         labelWidth,
         valueWidth
     }, index) => {
         const y = 21 + index * 4;
-        return [{
-                value: label,
-                x: 42,
-                y,
-                width: labelWidth,
-                fontSize: 8,
-                bold: false,
-                rotate: 0
-            },
-            {
-                value,
-                x: 58,
-                y,
-                width: valueWidth,
-                fontSize: 8,
-                bold: false,
-                rotate: 0
-            },
-        ];
+        const currentValue = `${specLabel} ${value}`
+        const currentSpecifiedParam = {x: columnRightX, y: y, width: textWidth}
+        const currentText = createText(textLabel, currentValue, false, options, currentSpecifiedParam)
+        textLabel.texts.push(currentText)
+        // return current_text;
     });
-    const texts = [{
-            value: goodsName,
-            x: 15,
-            y: 5,
-            width: 60,
-            fontSize: 9,
-            bold: true,
-            rotate: 0
-        },
-        {
-            value: "S:-0.00",
-            x: 9,
-            y: 0,
-            width: 15,
-            fontSize: 10,
-            bold: true,
-            rotate: 0
-        },
-        {
-            value: "C:-0.00",
-            x: 25,
-            y: 0,
-            width: 15,
-            fontSize: 10,
-            bold: true,
-            rotate: 0
-        },
-        {
-            value: english ? "Product:" : "品名:",
-            x: 6,
-            y: 5,
-            width: english ? 16 : 10,
-            fontSize: 9,
-            bold: true,
-            rotate: 0
-        },
-        {
-            value: english ? "RI:" : "折射率:",
-            x: 6,
-            y: 9,
-            width: 14,
-            fontSize: 8,
-            bold: false,
-            rotate: 0
-        },
-        {
-            value: `n(e)=${refractiveIndex}`,
-            x: 20,
-            y: 9,
-            width: 20,
-            fontSize: 8,
-            bold: false,
-            rotate: 0
-        },
-        {
-            value: english ? "Trans.:" : "透射比:",
-            x: 6,
-            y: 13,
-            width: 14,
-            fontSize: 8,
-            bold: false,
-            rotate: 0
-        },
-        {
-            value: english ? "Cat.0, UV-1" : "0类、UV-1",
-            x: 20,
-            y: 13,
-            width: 20,
-            fontSize: 8,
-            bold: false,
-            rotate: 0
-        },
-        {
-            value: english ? "Abbe:" : "阿贝数:",
-            x: 6,
-            y: 17,
-            width: 14,
-            fontSize: 8,
-            bold: false,
-            rotate: 0
-        },
-        {
-            value: `Vd=${abbe}`,
-            x: 20,
-            y: 17,
-            width: 18,
-            fontSize: 8,
-            bold: false,
-            rotate: 0
-        },
-        {
-            value: english ? "CT:" : "中心厚度:",
-            x: 6,
-            y: 21,
-            width: english ? 8 : 18,
-            fontSize: 8,
-            bold: false,
-            rotate: 0
-        },
-        {
-            value: "1.2mm",
-            x: 22,
-            y: 21,
-            width: 16,
-            fontSize: 8,
-            bold: false,
-            rotate: 0
-        },
-        {
-            value: english ? "Dia:" : "直径:",
-            x: 6,
-            y: 25,
-            width: 12,
-            fontSize: 8,
-            bold: false,
-            rotate: 0
-        },
-        {
-            value: `${diameter}mm`,
-            x: 20,
-            y: 25,
-            width: 16,
-            fontSize: 8,
-            bold: false,
-            rotate: 0
-        },
-        {
-            value: english ? "MFG Date:" : "生产日期:",
-            x: 6,
-            y: 29,
-            width: english ? 18 : 18,
-            fontSize: 8,
-            bold: false,
-            rotate: 0
-        },
-        {
-            value: dateText,
-            x: 20,
-            y: 29,
-            width: 24,
-            fontSize: 8,
-            bold: false,
-            rotate: 0
-        },
-        {
-            value: english ? "Standard:" : "执行标准:",
-            x: 6,
-            y: 33,
-            width: 18,
-            fontSize: 8,
-            bold: false,
-            rotate: 0
-        },
-        {
-            value: "QB/T2506-2017",
-            x: 20,
-            y: 33,
-            width: 34,
-            fontSize: 8,
-            bold: false,
-            rotate: 0
-        },
-        {
-            value: "GB10810.1-2005",
-            x: 4,
-            y: 38,
-            width: 30,
-            fontSize: 8,
-            bold: false,
-            rotate: 0
-        },
-        {
-            value: "GB10810.3-2006",
-            x: 4,
-            y: 42,
-            width: 30,
-            fontSize: 8,
-            bold: false,
-            rotate: 0
-        },
-        {
-            value: "GB10810.5-2012",
-            x: 4,
-            y: 46,
-            width: 30,
-            fontSize: 8,
-            bold: false,
-            rotate: 0
-        },
-        {
-            value: english ? "Category:" : "产品分类:",
-            x: 42,
-            y: 9,
-            width: 18,
-            fontSize: 8,
-            bold: false,
-            rotate: 0
-        },
-        {
-            value: english ? "Eyewear" : "眼镜类",
-            x: 58,
-            y: 9,
-            width: 20,
-            fontSize: 8,
-            bold: false,
-            rotate: 0
-        },
-        {
-            value: english ? "Use:" : "产品用途:",
-            x: 42,
-            y: 13,
-            width: 18,
-            fontSize: 8,
-            bold: false,
-            rotate: 0
-        },
-        {
-            value: english ? "Vision Correction" : "视力矫正用",
-            x: 58,
-            y: 13,
-            width: 20,
-            fontSize: 8,
-            bold: false,
-            rotate: 0
-        },
-        {
-            value: english ? "Grade:" : "等级:",
-            x: 42,
-            y: 17,
-            width: 12,
-            fontSize: 8,
-            bold: false,
-            rotate: 0
-        },
-        {
-            value: english ? "Qualified" : "合格",
-            x: 58,
-            y: 17,
-            width: 16,
-            fontSize: 8,
-            bold: false,
-            rotate: 0
-        },
-        ...optionalSpecTexts,
-    ];
 
     if (options.isMultiFocus) {
-        texts.push({
-            value: "R",
-            x: 2,
-            y: 0,
-            width: 7,
-            fontSize: 11,
-            bold: true,
-            rotate: 0
-        }, {
-            value: "A:",
-            x: 44,
-            y: 0,
-            width: 7,
-            fontSize: 9,
-            bold: true,
-            rotate: 0
-        }, {
-            value: "0",
-            x: 48,
-            y: 0,
-            width: 8,
-            fontSize: 9,
-            bold: true,
-            rotate: 0
-        }, {
-            value: "ADD:",
-            x: 56,
-            y: 0,
-            width: 12,
-            fontSize: 9,
-            bold: true,
-            rotate: 0
-        }, {
-            value: "+1.50",
-            x: 66,
-            y: 0,
-            width: 14,
-            fontSize: 9,
-            bold: true,
-            rotate: 0
-        }, );
+        const multiFocusParams = [
+            { 
+                value: "R", 
+                specifiedParam: {x: 2, y: 0, width: 7, fontSize: 11, bold: true} 
+            },
+            { 
+                value: "A: 0", 
+                specifiedParam: {x: 44, y: 0, width: 16, fontSize: 11, bold: true} 
+            },
+            { 
+                value: "ADD: +1.00", 
+                specifiedParam: {x: 58, y: 0, width: 26, fontSize: 11, bold: true} 
+            },
+        ]
+        for (const item of multiFocusParams) {
+            const currentText = createText(textLabel, item.value, false, options, item.specifiedParam)
+            textLabel.texts.push(currentText)
+        }
     }
+    return textLabel.texts
 
-    return normalizeTexts(texts, goodsName, {
-        language
-    });
+    // return normalizeTexts(label.texts, goodsName, {
+    //     language
+    // });
 }
 
-export const defaultLensTexts = createLensTexts();
+function createLensFeaturesData(label, options = {}) {
+    // 创建镜片标签的 features_data
+    const feature1Data = Array.from({ length: 51 }, (_, index) => ({
+        id: `column_${String(index + 1).padStart(3, "0")}`,
+        value: (index * 0.25).toFixed(2),
+    }));
+    const feature2Data = Array.from({ length: 8 }, (_, index) => ({
+        id: `column_${String(index + 1).padStart(3, "0")}`,
+        value: (index * 0.25).toFixed(2),
+    }));
+    const associationNamesValues = [ 
+        {value: "1.2mm", names: ["CT", "中心厚度"]}, 
+        {value: "72mm", names: ["Dia", "直径"]}, 
+        {value: "$date", names: ["MFG Date", "生产日期"]}, 
+    ]
+    const associationNameToTextId = new Map(
+        (label.texts || [])
+            .filter((text) => text.association_name)
+            .map((text) => [text.association_name, text.id])
+    );
+    const ctValueBySph = {
+        "0.00": "2.0mm",
+        "0.25": "1.8mm",
+        "0.50": "1.6mm",
+        "0.75": "1.5mm",
+        "1.00": "1.4mm",
+        "1.25": "1.3mm",
+    };
+
+    const feature1AssociationData = {};
+    const associationItems = associationNamesValues
+        .map((item) => ({
+            ...item,
+            id: item.names.map((name) => associationNameToTextId.get(name)).find(Boolean),
+        }))
+        .filter((item) => item.id);
+
+    for (let i = 0; i < feature1Data.length; i ++) {
+        const currentAssociation = {};
+
+        associationItems.forEach((item) => {
+            const value = item.names.includes("CT") || item.names.includes("中心厚度")
+                ? ctValueBySph[feature1Data[i].value] ?? item.value
+                : item.value;
+
+            currentAssociation[item.id] = value;
+        });
+
+        feature1AssociationData[feature1Data[i].id] = currentAssociation;
+    }
+    const featuresData = {
+        feature1_data: feature1Data,      // 批量打印数量二维表格行名称: [{id, value}, ...]
+        feature2_data: feature2Data,      // 批量打印数量二维表格列名称: [{id, value}, ...]
+        feature1_association_data: feature1AssociationData,    // { feature1_data[index].id: { texts[index].id: string, ... }, ...}
+    }
+    return featuresData;
+}
 
 export function createCommonTemplateLabel(options = {}) {
     const language = options.language || "zh";
@@ -872,11 +779,14 @@ export function createCommonTemplateLabel(options = {}) {
 }
 
 export function createLensLabel(options = {}) {
-    return {
-        ...defaultLabel,
+    let newLensLabel = cloneLabel(defaultLabel)
+    newLensLabel = {
+        ...newLensLabel,
         name: "LensLabelPrint",
-        texts: createLensTexts(options),
-        lensPowerRows: createLensPowerRows("1.2", options.diameter || "72"),
+        texts: createLensTexts(newLensLabel, options),
+        // lensPowerRows: createLensPowerRows("1.2", options.diameter || "72"),
+        width: 80,
+        height: 50,
         qrCode: {
             visible: false,
             value: "https://label.zwglass.net/",
@@ -897,37 +807,62 @@ export function createLensLabel(options = {}) {
             barWidth: 1,
         },
     };
+    newLensLabel.features_data = createLensFeaturesData(newLensLabel, options);
+    return newLensLabel;
 }
 
-export function createText(label, value, isNewLabel=false, options = {}) {
+function normalizeFeatureIndex(value, fallback = 0) {
+    const index = Number(value ?? fallback);
+    return index === 1 || index === 2 ? index : 0;
+}
+
+function normalizeNumber(value, fallback = 0) {
+    const numberValue = Number(value);
+    return Number.isFinite(numberValue) ? numberValue : fallback;
+}
+
+function normalizeBoolean(value, fallback = false) {
+    if (typeof value === "boolean") return value;
+    if (value === "true") return true;
+    if (value === "false") return false;
+    return fallback;
+}
+
+export function createText(label, value, isNewLabel=false, options = {}, specifiedParam = {}) {
     const textValue = value ?? getDefaultTextValue(options.language);
-    let displayTitle = false
-    let featureIndex = 0
+    let displayTitle = specifiedParam.display_title ?? false
+    let featureIndex = normalizeFeatureIndex(specifiedParam.feature_index)
     const textsLength = label.texts.length
     const existingIds = new Set((label.texts || []).map((text) => String(text.id ?? "")).filter(Boolean));
     if (isNewLabel) {
-        displayTitle = textsLength === 0
-        featureIndex = textsLength === 1 ? 1 : textsLength === 2 ? 2 : 0
+        displayTitle = specifiedParam.display_title ?? textsLength === 0
+        featureIndex = normalizeFeatureIndex(
+            specifiedParam.feature_index,
+            textsLength === 1 ? 1 : textsLength === 2 ? 2 : 0
+        )
     }
+    const defaultY = Math.min(8 + textsLength * 4, Math.max(label.height - 8, 2));
     return {
-        id: createNextSixDigitId(existingIds),
+        id: specifiedParam.id ?? createNextSixDigitId(existingIds),
         value: textValue,                       // 变量使用 {} 包裹; 变量名称不能有重复, 不能有空格; 没有 {} association==true 也不替换
-        display_title: displayTitle,       // 只有新建标签时第一个文本能赋值 true, 其余都是 false
+        display_title: displayTitle,            // 只有新建标签时第一个文本能赋值 true, 其余都是 false
         feature_index: featureIndex,           // 只有新建标签时第二、三个文本才能赋值 1 和 2, 其余都赋值为 0
-        x: 2,
-        y: Math.min(8 + textsLength * 4, Math.max(label.height - 8, 2)),
-        width: calculateTextWidth(textValue),
-        fontSize: 9,
-        bold: false,
-        rotate: 0,
-        association: false,         // 是否是 feature1 的关联数据; 为 true 替换 value 中的变量
+        x: normalizeNumber(specifiedParam.x, 2),
+        y: normalizeNumber(specifiedParam.y, defaultY),
+        width: normalizeNumber(specifiedParam.width, calculateTextWidth(textValue)),
+        fontSize: normalizeNumber(specifiedParam.fontSize, 8),
+        bold: normalizeBoolean(specifiedParam.bold, false),
+        rotate: normalizeNumber(specifiedParam.rotate, 0),
+        association: normalizeBoolean(specifiedParam.association, false),               // 是否是 feature1 的关联数据; 为 true 替换 value 中的变量
+        association_name: specifiedParam.association_name ?? "",                        // 关联二维表 column 标题
     };
 }
 
 export function normalizeLabel(input, fallback, options = {}) {
     if (!input || typeof input !== "object") return fallback;
-    const fallbackTitle = getDisplayTitleValue(input, input.name || fallback.name || "LabelPrint");
-    const texts = normalizeTexts(Array.isArray(input.texts) ? input.texts : fallback.texts, fallbackTitle, options);
+    // const fallbackTitle = getDisplayTitleValue(input, input.name || fallback.name || "LabelPrint");
+    // const texts = normalizeTexts(Array.isArray(input.texts) ? input.texts : fallback.texts, fallbackTitle, options);
+    const texts = Array.isArray(input.texts) ? input.texts : fallback.texts;
     const feature1Data = normalizeFeatureItems(
         Array.isArray(input.features_data?.feature1_data) ? input.features_data.feature1_data : fallback.features_data.feature1_data
     );

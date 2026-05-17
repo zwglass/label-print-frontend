@@ -16,11 +16,11 @@ export default function LabelToolbar({ isLens, showFeatureAssociation = false, e
         <button className="btn btn-circle btn-info" title={t("editLabelSize")} type="button" onClick={onEditSize}>
           <Icon name="size" />
         </button>
-        {isLens ? (
+        {/* {isLens ? (
           <button className="btn btn-circle btn-info" title={t("editLensPower")} type="button" onClick={onEditLensPower}>
             <Icon name="lens" />
           </button>
-        ) : null}
+        ) : null} */}
         {showFeatureAssociation ? (
           <button className="btn btn-circle btn-info" title={t("featureAssociationEdit")} type="button" onClick={onEditFeatureAssociation}>
             <Icon name="link" />

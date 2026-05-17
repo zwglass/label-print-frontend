@@ -1083,54 +1083,20 @@ body {
 
 .lens-batch-table-wrap {
   width: 100%;
-  max-height: min(66vh, 700px);
-  overflow: auto;
-  border: 1px solid #e8e8e8;
+  overflow: visible;
 }
 
-.lens-batch-table {
-  width: max-content;
-  min-width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
-  font-size: 18px;
+.lens-batch-dimensional .two-dimensional-table-wrap {
+  max-height: min(58vh, 640px);
 }
 
-.lens-batch-table th,
-.lens-batch-table td {
+.lens-batch-dimensional .two-dimensional-table th,
+.lens-batch-dimensional .two-dimensional-table td {
   width: 104px;
-  height: 46px;
-  padding: 0 10px;
-  border: 1px solid #ececec;
-  text-align: left;
-  vertical-align: middle;
 }
 
-.lens-batch-table th:first-child {
-  position: sticky;
-  left: 0;
-  z-index: 2;
+.lens-batch-dimensional .two-dimensional-table th:first-child {
   width: 132px;
-  background: #fff;
-}
-
-.lens-batch-table thead th {
-  position: sticky;
-  top: 0;
-  z-index: 3;
-  background: #fafafa;
-  font-weight: 800;
-}
-
-.lens-batch-table thead th:first-child {
-  z-index: 4;
-}
-
-.lens-batch-table .input {
-  width: 100%;
-  height: 34px;
-  padding: 0;
-  font-size: 16px;
 }
 
 .two-dimensional-input {
