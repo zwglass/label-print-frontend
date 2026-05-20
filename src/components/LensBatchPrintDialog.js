@@ -1,18 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { createDiopterValues, lensPowerSigns, updateLensBatchLabel } from "@/lib/labelModels";
+import { createDiopterItems, lensPowerSigns, updateLensBatchLabel } from "@/lib/labelModels";
 import { getReadyLodop, sendLabelToLodopAsync } from "@/lib/lodopPrint";
 import { useI18n } from "@/lib/i18n";
 import TwoDimensionalInputTable, { getTwoDimensionalInputData, getValidationResult } from "./TwoDimensionalInputTable";
 
 const maxCylOptions = [200, 400, 600];
-const maxSph = 30;
+const maxSphOptions = [1250, 2000, 3000];
 const maxColumnCyl = 8;
 
-function createDimensionItems(maxValue) {
-  return createDiopterValues(maxValue).map((value) => ({ id: value, value }));
-}
+// function createDimensionItems(maxValue) {
+//   return createDiopterValues(maxValue).map((value) => ({ id: value, value }));
+// }
 
 function isQuantityValueValid(value) {
   if (value === "") return true;
@@ -87,37 +87,31 @@ function filterDimensionItemsByMaxValue(items, maxValue) {
 
 export default function LensBatchPrintDialog({ open, label, printerIndex = 0, onClose, onPrint, onNotify = () => {} }) {
   const { t } = useI18n();
-  const [maxCyl, setMaxCyl] = useState(200);
+  const [maxCyl, setMaxCyl] = useState(maxCylOptions[0]);
+  const [maxSph, setMaxSph] = useState(maxSphOptions[0]);
   const [signIndex, setSignIndex] = useState(0);
   const [rows, setRows] = useState([]);
   const [columns, setColumns] = useState([]);
   const [values, setValues] = useState({});
   const [printing, setPrinting] = useState(false);
 
-  const featureRows = useMemo(() => getFeatureDimensionItems(label, "feature1_data"), [label]);
-  const featureColumns = useMemo(() => getFeatureDimensionItems(label, "feature2_data"), [label]);
-  const rowOptions = useMemo(
-    () => (featureRows.length ? filterDimensionItemsByMaxValue(featureRows, maxSph) : createDimensionItems(maxSph)),
-    [featureRows]
-  );
-  const columnOptions = useMemo(() => {
-    const maxValue = Math.min(maxColumnCyl, maxCyl / 100);
-    return featureColumns.length ? filterDimensionItemsByMaxValue(featureColumns, maxValue) : createDimensionItems(maxValue);
-  }, [featureColumns, maxCyl]);
+  // const featureRows = useMemo(() => getFeatureDimensionItems(label, "feature1_data"), [label]);
+  // const featureColumns = useMemo(() => getFeatureDimensionItems(label, "feature2_data"), [label]);
+  const rowOptions = useMemo(() => createDiopterItems(maxSph, "sph"), [maxSph]);
+  const columnOptions = useMemo(() => createDiopterItems(maxCyl, "cyl"), [maxCyl]);
   const sign = lensPowerSigns[signIndex] || lensPowerSigns[0];
 
   useEffect(() => {
     if (!open) return;
 
-    const maxColumnValue = Math.min(maxColumnCyl, maxCyl / 100);
-    const nextRows = featureRows.length ? filterDimensionItemsByMaxValue(featureRows, maxSph) : createDimensionItems(maxSph);
-    const nextColumns = featureColumns.length
-      ? filterDimensionItemsByMaxValue(featureColumns, maxColumnValue)
-      : createDimensionItems(maxColumnValue);
+    const nextRows = createDiopterItems(maxSph, "sph");
+    const nextColumns = createDiopterItems(maxCyl, "cyl");
+
     setRows(nextRows);
     setColumns(nextColumns);
     setValues((current) => normalizeBatchValues(nextRows, nextColumns, current));
-  }, [featureColumns, featureRows, maxCyl, open]);
+  }, [maxCyl, maxSph, open]);
+  // }, [featureColumns, featureRows, maxCyl, maxSph, open]);
 
   if (!open) return null;
 
@@ -147,13 +141,15 @@ export default function LensBatchPrintDialog({ open, label, printerIndex = 0, on
     return { status: true, error: "" };
   };
 
-  const updateMaxCyl = (value) => {
-    const maxValue = Math.min(maxColumnCyl, value / 100);
-    const nextColumns = featureColumns.length ? filterDimensionItemsByMaxValue(featureColumns, maxValue) : createDimensionItems(maxValue);
-    setMaxCyl(value);
-    setColumns(nextColumns);
-    setValues(normalizeBatchValues(rows, nextColumns, {}));
-  };
+  // const createSphCylColumns = (maxValue) => createDimensionItems(maxValue);
+
+  // const updateMaxCyl = (value) => {
+  //   const maxValue = Math.min(maxColumnCyl, value / 100);
+  //   const nextColumns = createCylColumns(maxValue);
+  //   setMaxCyl(value);
+  //   setColumns(nextColumns);
+  //   setValues(normalizeBatchValues(rows, nextColumns, {}));
+  // };
 
   const createPrintJobs = () => {
     const jobs = [];
@@ -230,6 +226,20 @@ export default function LensBatchPrintDialog({ open, label, printerIndex = 0, on
 
           <div className="lens-batch-options">
             <div className="lens-batch-radio-row">
+              <span>{t("maxSph")}</span>
+              {maxSphOptions.map((value) => (
+                <label key={value} className="lens-batch-radio">
+                  <input
+                    className="radio radio-primary"
+                    type="radio"
+                    name="lens-max-sph"
+                    checked={maxSph === value}
+                    onChange={() => setMaxSph(value)}
+                  />
+                  {value}
+                </label>
+              ))}
+              <div className="divider divider-horizontal"></div>
               <span>{t("maxCyl")}</span>
               {maxCylOptions.map((value) => (
                 <label key={value} className="lens-batch-radio">
@@ -238,7 +248,7 @@ export default function LensBatchPrintDialog({ open, label, printerIndex = 0, on
                     type="radio"
                     name="lens-max-cyl"
                     checked={maxCyl === value}
-                    onChange={() => updateMaxCyl(value)}
+                    onChange={() => setMaxCyl(value)}
                   />
                   {value}
                 </label>
@@ -292,6 +302,10 @@ export default function LensBatchPrintDialog({ open, label, printerIndex = 0, on
               columnNamePlaceholder={t("columnName")}
               rowNameOptions={rowOptions}
               columnNameOptions={columnOptions}
+              allowAddRows={false}
+              allowAddColumns={false}
+              allowDeleteRows={false}
+              allowDeleteColumns={false}
               allowRenameRows={false}
               allowRenameColumns={false}
               className="lens-batch-dimensional"

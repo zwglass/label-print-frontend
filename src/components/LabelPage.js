@@ -723,6 +723,7 @@ export default function LabelPage({ type }) {
         onNotify={notify}
       />
       <FeatureAssociationDialog
+        type={type}
         open={featureAssociationOpen}
         label={label}
         onCancel={() => setFeatureAssociationOpen(false)}

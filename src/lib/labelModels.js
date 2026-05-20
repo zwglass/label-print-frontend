@@ -305,6 +305,17 @@ export function createDiopterValues(maxValue = 12) {
     }, (_, index) => (index * 0.25).toFixed(2));
 }
 
+export function createDiopterItems(maxValue = 1250, prefix="sph") {
+    // 创建 sph cyl 光度 list[{id: `${prefix}_${String(index).padStart(3, "0")}`, value: (index * 0.25).toFixed(2) }, ...]
+    // maxSphCylOption 整数 200 600 800 1250 2000 3000; prefix in ["spy", "cyl"]
+    return Array.from({
+        length: Math.floor(maxValue / 25) + 1
+    }, (_, index) => ({
+        id: `${prefix}_${String(index).padStart(3, "0")}`,
+        value: (index * 0.25).toFixed(2),
+    }));
+}
+
 export function findLensPowerRow(label, sph) {
     const rows = label.lensPowerRows?.length ? label.lensPowerRows : createLensPowerRows();
     const target = Math.abs(parseFloat(sph));
@@ -650,14 +661,8 @@ export function createLensTexts(label, options = {}) {
 
 function createLensFeaturesData(label, options = {}) {
     // 创建镜片标签的 features_data
-    const feature1Data = Array.from({ length: 51 }, (_, index) => ({
-        id: `column_${String(index + 1).padStart(3, "0")}`,
-        value: (index * 0.25).toFixed(2),
-    }));
-    const feature2Data = Array.from({ length: 8 }, (_, index) => ({
-        id: `column_${String(index + 1).padStart(3, "0")}`,
-        value: (index * 0.25).toFixed(2),
-    }));
+    const feature1Data = createDiopterItems(1250, "sph");
+    const feature2Data = createDiopterItems(200, "cyl");
     const associationNamesValues = [ 
         {value: "1.2mm", names: ["CT", "中心厚度"]}, 
         {value: "72mm", names: ["Dia", "直径"]}, 

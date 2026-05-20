@@ -126,7 +126,7 @@ function removeColumnValues(values = {}, columnId) {
   );
 }
 
-export default function FeatureAssociationDialog({ open, label, onCancel, onSave }) {
+export default function FeatureAssociationDialog({ type, open, label, onCancel, onSave }) {
   const { language, t } = useI18n();
   const featureData = label?.features_data || {};
   const [rows, setRows] = useState([]);
@@ -268,6 +268,9 @@ export default function FeatureAssociationDialog({ open, label, onCancel, onSave
             onRenameColumn={handleRenameColumn}
             columnNameOptions={columnOptions}
             allowAddColumns={columnOptions.length > 0}
+            allowAddRows={type !== "lens"}
+            allowDeleteRows={type !== "lens"}
+            allowRenameRows={type !== "lens"}
             cornerLabel="Feature1"
             normalModeLabel={t("normalInput")}
             batchModeLabel={t("batchInput")}

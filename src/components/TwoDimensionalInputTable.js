@@ -324,8 +324,8 @@ export default function TwoDimensionalInputTable({
     return option ? option.raw : { id: String(name), value: String(name) };
   };
 
-  const addRow = async () => {
-    const name = rowNameRestricted ? newRowName : newRowName.trim();
+  const addRow = async (nextName = newRowName) => {
+    const name = rowNameRestricted ? nextName : nextName.trim();
     if (!name || existingRowKeys.has(String(name)) || (!rowNameRestricted && existingRowValues.has(String(name)))) return;
 
     const item = getAddedItem(name, rowOptionItems);
@@ -334,8 +334,8 @@ export default function TwoDimensionalInputTable({
     setNewRowName("");
   };
 
-  const addColumn = async () => {
-    const name = columnNameRestricted ? newColumnName : newColumnName.trim();
+  const addColumn = async (nextName = newColumnName) => {
+    const name = columnNameRestricted ? nextName : nextName.trim();
     if (!name || existingColumnKeys.has(String(name)) || (!columnNameRestricted && existingColumnValues.has(String(name)))) return;
 
     const item = getAddedItem(name, columnOptionItems);
@@ -480,24 +480,15 @@ export default function TwoDimensionalInputTable({
   const selectCell = (row, column, { updateExisting = false } = {}) => {
     const cellKey = createCellKey(row.id, column.id);
     const wasSelected = Boolean(selectedCells[cellKey]);
+    const nextSelection = {
+      [cellKey]: { rowKey: row.id, columnKey: column.id },
+    };
 
-    setSelectedCells((current) => {
-      if (current[cellKey]) return current;
-      return { ...current, [cellKey]: { rowKey: row.id, columnKey: column.id } };
-    });
+    setSelectedCells(nextSelection);
 
     if (batchValue !== "" && (!wasSelected || updateExisting)) {
       updateCell(row, column, batchValue);
     }
-  };
-
-  const unselectCell = (cellKey) => {
-    setSelectedCells((current) => {
-      if (!current[cellKey]) return current;
-      const next = { ...current };
-      delete next[cellKey];
-      return next;
-    });
   };
 
   const updateBatchValue = (nextValue) => {
@@ -600,7 +591,11 @@ export default function TwoDimensionalInputTable({
             <select
               className="select select-bordered select-sm"
               value={newColumnName}
-              onChange={(event) => setNewColumnName(event.target.value)}
+              onChange={(event) => {
+                const nextName = event.target.value;
+                setNewColumnName(nextName);
+                addColumn(nextName);
+              }}
             >
               <option value="">{columnNamePlaceholder}</option>
               {availableColumnOptions.map((column) => (
@@ -620,7 +615,7 @@ export default function TwoDimensionalInputTable({
               }}
             />
           )}
-          <button className="btn btn-sm" type="button" onClick={addColumn} disabled={!canAddColumn}>
+          <button className="btn btn-sm" type="button" onClick={() => addColumn()} disabled={!canAddColumn}>
             <Icon name="plus" />
             {addColumnLabel}
           </button>
@@ -680,8 +675,7 @@ export default function TwoDimensionalInputTable({
                         event.preventDefault();
                         const cellKey = createCellKey(row.id, column.id);
                         pointerStartRef.current = {
-                          cellKey,
-                          wasSelected: Boolean(selectedCells[cellKey]),
+                          shouldUnselect: Object.keys(selectedCells).length === 1 && Boolean(selectedCells[cellKey]),
                         };
                         dragAnchorRef.current = { rowIndex, columnIndex };
                         dragMovedRef.current = false;
@@ -699,8 +693,8 @@ export default function TwoDimensionalInputTable({
                         if (activeMode !== "batch") return;
                         event.preventDefault();
                         if (dragMoved || dragMovedRef.current) return;
-                        if (pointerStartRef.current?.wasSelected) {
-                          unselectCell(pointerStartRef.current.cellKey);
+                        if (pointerStartRef.current?.shouldUnselect) {
+                          setSelectedCells({});
                         }
                       }}
                     >
@@ -739,7 +733,11 @@ export default function TwoDimensionalInputTable({
             <select
               className="select select-bordered select-sm"
               value={newRowName}
-              onChange={(event) => setNewRowName(event.target.value)}
+              onChange={(event) => {
+                const nextName = event.target.value;
+                setNewRowName(nextName);
+                addRow(nextName);
+              }}
             >
               <option value="">{rowNamePlaceholder}</option>
               {availableRowOptions.map((row) => (
@@ -759,7 +757,7 @@ export default function TwoDimensionalInputTable({
               }}
             />
           )}
-          <button className="btn btn-sm" type="button" onClick={addRow} disabled={!canAddRow}>
+          <button className="btn btn-sm" type="button" onClick={() => addRow()} disabled={!canAddRow}>
             <Icon name="plus" />
             {addRowLabel}
           </button>
