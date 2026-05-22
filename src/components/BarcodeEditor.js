@@ -1,6 +1,7 @@
 "use client";
 
 import FloatingEditorFrame from "./FloatingEditorFrame";
+import { Icon } from "./icons";
 import { useI18n } from "@/lib/i18n";
 
 const barcodeTypes = [
@@ -26,6 +27,16 @@ export default function BarcodeEditor({ barcode, onChange, onClose, frameStyle, 
 
   return (
     <FloatingEditorFrame title={t("barcodeEditor")} onClose={onClose} frameStyle={barcodeEditorFrameStyle} arrowStyle={arrowStyle} onMeasure={onMeasure}>
+      <div className="editor-toolstrip">
+        <button
+          className="btn btn-circle btn-sm"
+          type="button"
+          title={t("rotateBarcode")}
+          onClick={() => onChange({ rotate: ((Number(barcode.rotate) || 0) + 90) % 360 })}
+        >
+          <Icon name="refresh" />
+        </button>
+      </div>
       <div className="editor-form barcode-editor-form">
         <label className="editor-row" style={wideEditorRowStyle}>
           {t("barcodeType")}
@@ -53,8 +64,8 @@ export default function BarcodeEditor({ barcode, onChange, onClose, frameStyle, 
           <input
             className="input input-primary input-sm"
             type="number"
-            step="0.1"
-            min="0.1"
+            step="1"
+            min="1"
             value={barcode.width}
             placeholder={t("numberExample30")}
             onChange={(event) => onChange({ width: Number(event.target.value) || 1 })}

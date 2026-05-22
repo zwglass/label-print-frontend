@@ -1,3 +1,4 @@
+import QRCode from "qrcode";
 import { formatDateTimeToken, getCurrentDateTimeFormats } from "@/lib/dateTime";
 
 
@@ -116,6 +117,17 @@ export const lensPowerSigns = [{
         cyl: "+"
     },
 ];
+
+const lodopSupportedQrCodeVersions = [1, 2, 3, 5, 7, 10, 14];
+
+export function calculateLodopQrCodeVersion(value, options = {}) {
+    const qrCode = QRCode.create(value || " ", {
+        errorCorrectionLevel: options.errorCorrectionLevel || "M",
+    });
+    const calculatedVersion = qrCode.version;
+
+    return lodopSupportedQrCodeVersions.find((version) => version >= calculatedVersion) || calculatedVersion;
+}
 
 function hasTextValue(value) {
     return String(value ?? "").trim().length > 0;
@@ -795,6 +807,44 @@ function normalizeBoolean(value, fallback = false) {
     return fallback;
 }
 
+function normalizeRotate(value) {
+    const rotate = normalizeNumber(value, 0) % 360;
+    return rotate < 0 ? rotate + 360 : rotate;
+}
+
+function rotatePosition90Clockwise(item, labelHeight) {
+    return {
+        x: labelHeight - normalizeNumber(item?.y, 0),
+        y: normalizeNumber(item?.x, 0),
+    };
+}
+
+function rotateItem90Clockwise(item, labelHeight) {
+    if (!item || typeof item !== "object") return item;
+
+    return {
+        ...item,
+        ...rotatePosition90Clockwise(item, labelHeight),
+        rotate: normalizeRotate(normalizeNumber(item.rotate, 0) + 90),
+    };
+}
+
+export function rotateLabel90(label) {
+    if (!label || typeof label !== "object") return label;
+
+    const width = normalizeNumber(label.width, defaultLabel.width);
+    const height = normalizeNumber(label.height, defaultLabel.height);
+
+    return {
+        ...label,
+        width: height,
+        height: width,
+        texts: (label.texts || []).map((text) => rotateItem90Clockwise(text, height)),
+        qrCode: rotateItem90Clockwise(label.qrCode, height),
+        barcode: rotateItem90Clockwise(label.barcode, height),
+    };
+}
+
 export function createText(label, value, isNewLabel=false, options = {}, specifiedParam = {}) {
     const textValue = value ?? getDefaultTextValue(options.language);
     let displayTitle = specifiedParam.display_title ?? false
@@ -893,4 +943,69 @@ export function newLabelTexts(label, options = {}) {
     });
 
     return normalizeTexts(texts, textDefinitions[0].value, options);
+}
+
+export function textCssStyleCalculate(params={}) {
+    const textCssStyle={
+        left: `${params.x}mm`,
+        top: `${params.y}mm`,
+        width: `${params.width}mm`,
+        fontSize: `${params.fontSize}pt`,
+        fontWeight: params.bold ? 700 : 400,
+        transform: `rotate(${params.rotate || 0}deg)`,
+        transformOrigin: "0 0",
+    };
+    return textCssStyle;
+}
+
+const qrTipVerticalGapMm = 0;
+
+function rotatePoint90AroundOrigin({ x, y, originX, originY, rotate }) {
+    const normalizedRotate = normalizeRotate(rotate);
+    const relativeX = normalizeNumber(x, 0) - normalizeNumber(originX, 0);
+    const relativeY = normalizeNumber(y, 0) - normalizeNumber(originY, 0);
+    const baseX = normalizeNumber(originX, 0);
+    const baseY = normalizeNumber(originY, 0);
+
+    if (normalizedRotate === 90) {
+        return {
+            x: baseX - relativeY,
+            y: baseY + relativeX,
+        };
+    }
+
+    if (normalizedRotate === 180) {
+        return {
+            x: baseX - relativeX,
+            y: baseY - relativeY,
+        };
+    }
+
+    if (normalizedRotate === 270) {
+        return {
+            x: baseX + relativeY,
+            y: baseY - relativeX,
+        };
+    }
+
+    return {
+        x: normalizeNumber(x, 0),
+        y: normalizeNumber(y, 0),
+    };
+}
+
+export function calculateQrcodeTipXy(qrcodeObj, tipWidth) {
+    const qrcodeSize = normalizeNumber(qrcodeObj.size, 14);
+    const qrcodeX = normalizeNumber(qrcodeObj.x, 0);
+    const qrcodeY = normalizeNumber(qrcodeObj.y, 0);
+    
+    const normalizedTipWidth = normalizeNumber(tipWidth, qrcodeSize);
+
+    return rotatePoint90AroundOrigin({
+        x: qrcodeX + (qrcodeSize - normalizedTipWidth) / 2,
+        y: qrcodeY + qrcodeSize + qrTipVerticalGapMm,
+        originX: qrcodeX,
+        originY: qrcodeY,
+        rotate: qrcodeObj.rotate,
+    });
 }

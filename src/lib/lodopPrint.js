@@ -1,7 +1,10 @@
 import { appConfig } from "@/lib/config";
-import { calculateTextWidth, removeVariableBraces } from "@/lib/labelModels";
+import { calculateLodopQrCodeVersion, calculateTextWidth, removeVariableBraces, calculateQrcodeTipXy } from "@/lib/labelModels";
+import QRCode from "qrcode";
 
 let clodopLoadingPromise = null;
+
+const qrTipVerticalGapMm = -5;
 
 const barcodeLodopTypes = {
   CODE128: "128Auto",
@@ -19,11 +22,112 @@ const barcodeLodopTypes = {
   CODABAR: "Codabar",
 };
 
-const qrTipVerticalGapMm = -5;
-
 function mm(value, fallback = 0) {
   const numberValue = Number(value);
   return `${Number.isFinite(numberValue) ? numberValue : fallback}mm`;
+}
+
+function numberValue(value, fallback = 0) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function normalizeAngle(value) {
+  const angle = numberValue(value, 0) % 360;
+  return angle < 0 ? angle + 360 : angle;
+}
+
+function getCssRotatedBox({ x, y, width, height, rotate }) {
+  const normalizedRotate = normalizeAngle(rotate);
+  const box = {
+    x: numberValue(x, 0),
+    y: numberValue(y, 0),
+    width: numberValue(width, 30),
+    height: numberValue(height, 20),
+  };
+
+  if (normalizedRotate === 90) {
+    return {
+      ...box,
+      x: box.x - box.height,
+      width: numberValue(box.height, 30),
+      height: numberValue(box.width, 20),
+    };
+  }
+
+  if (normalizedRotate === 180) {
+    return {
+      ...box,
+      x: box.x - box.width,
+      y: box.y - box.height,
+    };
+  }
+
+  if (normalizedRotate === 270) {
+    return {
+      ...box,
+      y: box.y - box.width,
+      width: numberValue(box.height, 30),
+      height: numberValue(box.width, 20),
+    };
+  }
+
+  return box;
+}
+
+function getLodopQrCodeBox({ x, y, size, rotate }) {
+  const normalizedRotate = normalizeAngle(rotate);
+  const box = {
+    x: numberValue(x, 0),
+    y: numberValue(y, 0),
+    size: numberValue(size, 14),
+  };
+
+  // const rotateOffset = Math.round(box.size / 4);
+  const rotateOffset = 0;
+
+  if (normalizedRotate === 90) {
+    return {
+      ...box,
+      x: box.x + rotateOffset,
+    };
+  }
+
+  if (normalizedRotate === 180) {
+    return {
+      ...box,
+      x: box.x + rotateOffset,
+      y: box.y + rotateOffset,
+    };
+  }
+
+  if (normalizedRotate === 270) {
+    return {
+      ...box,
+      y: box.y + rotateOffset,
+    };
+  }
+
+  return box;
+}
+
+function createQrCodeSvg(value, version) {
+  let svg = "";
+
+  QRCode.toString(value || " ", {
+    type: "svg",
+    errorCorrectionLevel: "M",
+    version,
+    margin: 1,
+    color: {
+      dark: "#000000",
+      light: "#ffffff",
+    },
+  }, (error, result) => {
+    if (!error) svg = result;
+  });
+
+  return svg;
 }
 
 function getLodopObject() {
@@ -112,30 +216,41 @@ function addLodopText(lodop, text) {
 function addLodopQrCode(lodop, qrCode) {
   if (!qrCode?.visible) return;
 
-  lodop.SET_PRINT_STYLE("Angle", 0);
-  lodop.ADD_PRINT_BARCODE(
-    mm(qrCode.y, 0),
-    mm(qrCode.x, 0),
-    mm(qrCode.size, 14),
-    mm(qrCode.size, 14),
-    "QRCode",
-    removeVariableBraces(qrCode.value || " ")
+  const rotate = normalizeAngle(qrCode.rotate);
+  const qrSize = numberValue(qrCode.size, 14);
+  const qrCodeVersion = calculateLodopQrCodeVersion(qrCode.value);
+  const box = getLodopQrCodeBox({
+    x: qrCode.x,
+    y: qrCode.y,
+    size: qrSize,
+    rotate,
+  });
+
+  const svg = createQrCodeSvg(removeVariableBraces(qrCode.value || " "), qrCodeVersion);
+
+  lodop.SET_PRINT_STYLE("Angle", -rotate);
+  lodop.ADD_PRINT_HTM(
+    mm(box.y, 0),
+    mm(box.x, 0),
+    mm(box.size, 14),
+    mm(box.size, 14),
+    svg
   );
+  // lodop.SET_PRINT_STYLEA(0, "Border", 1);
+  lodop.SET_PRINT_STYLEA(0, "Angle", -rotate);
 
   if (qrCode.tip) {
-    const qrX = Number(qrCode.x) || 0;
-    const qrY = Number(qrCode.y) || 0;
-    const qrSize = Number(qrCode.size) || 14;
     const tipWidth = Math.max(qrSize, calculateTextWidth(qrCode.tip, qrSize));
+    const tipPoint = calculateQrcodeTipXy(qrCode, tipWidth);
 
     addLodopText(lodop, {
       value: qrCode.tip,
-      x: qrX + (qrSize - tipWidth) / 2,
-      y: qrY + qrSize + qrTipVerticalGapMm,
+      x: tipPoint.x,
+      y: tipPoint.y,
       width: tipWidth,
       fontSize: Number(qrCode.tipFontSize) || 9,
       bold: false,
-      rotate: 0,
+      rotate,
       align: "center",
     });
   }
@@ -144,17 +259,30 @@ function addLodopQrCode(lodop, qrCode) {
 function addLodopBarcode(lodop, barcode) {
   if (!barcode?.visible) return;
 
-  lodop.SET_PRINT_STYLE("Angle", 0);
-  lodop.SET_PRINT_STYLE("FontSize", 9);
+  const rotate = normalizeAngle(barcode.rotate);
+  const barcodeWidth = numberValue(barcode.width, 30);
+  const barcodeHeight = numberValue(barcode.height, 20);
+  const box = getCssRotatedBox({
+    x: barcode.x,
+    y: barcode.y,
+    width: barcodeWidth,
+    height: barcodeHeight,
+    rotate,
+  });
+  const barcodeFontSize = 9;
+
+  lodop.SET_PRINT_STYLE("Angle", -rotate);
+  lodop.SET_PRINT_STYLE("FontSize", barcodeFontSize);
   lodop.SET_PRINT_STYLE("Bold", 0);
   lodop.ADD_PRINT_BARCODE(
-    mm(barcode.y, 0),
-    mm(barcode.x, 0),
-    mm(barcode.width, 30),
-    mm(barcode.height, 20),
+    mm(box.y, 0),
+    mm(box.x, 0),
+    mm(box.width, 30),
+    mm(box.height, 20),
     barcodeLodopTypes[barcode.type] || "128Auto",
     removeVariableBraces(barcode.value || " ")
   );
+  lodop.SET_PRINT_STYLEA(0, "Angle", -rotate);
 }
 
 function prepareLabelPrint(lodop, label, printerIndex, copies = 1) {

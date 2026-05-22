@@ -1,5 +1,6 @@
 import BarcodeView from "./BarcodeView";
 import QrCodeView from "./QrCodeView";
+import { textCssStyleCalculate } from "@/lib/labelModels";
 
 function isVariableText(text) {
   return text?.association === true || Number(text?.feature_index || 0) > 0;
@@ -31,6 +32,7 @@ export default function LabelPreview({
   editText = false,
   onSelectQr = () => {},
   onSelectBarcode = () => {},
+  onBarcodeChange = () => {},
 }) {
   return (
     <div
@@ -48,21 +50,13 @@ export default function LabelPreview({
           onKeyDown={(event) => {
             if (event.key === "Enter") event.preventDefault();
           }}
-          style={{
-            left: `${text.x}mm`,
-            top: `${text.y}mm`,
-            width: `${text.width}mm`,
-            fontSize: `${text.fontSize}pt`,
-            fontWeight: text.bold ? 700 : 400,
-            transform: `rotate(${text.rotate || 0}deg)`,
-            transformOrigin: "0 0",
-          }}
+          style={textCssStyleCalculate(text)}
         >
           {renderTextValue(text)}
         </p>
       ))}
       {label.qrCode.visible && <QrCodeView qrCode={label.qrCode} onSelect={onSelectQr} />}
-      {label.barcode.visible && <BarcodeView barcode={label.barcode} onSelect={onSelectBarcode} />}
+      {label.barcode.visible && <BarcodeView barcode={label.barcode} onSelect={onSelectBarcode} onChange={onBarcodeChange} />}
     </div>
   );
 }

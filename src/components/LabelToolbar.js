@@ -3,7 +3,7 @@
 import { Icon } from "./icons";
 import { useI18n } from "@/lib/i18n";
 
-export default function LabelToolbar({ isLens, showFeatureAssociation = false, editText, onToggleEdit, onToggleQr, onEditQr, onToggleBarcode, onEditBarcode, onAddText, onEditSize, onEditLensPower, onEditFeatureAssociation }) {
+export default function LabelToolbar({ isLens, showFeatureAssociation = false, editText, onToggleEdit, onToggleQr, onEditQr, onToggleBarcode, onEditBarcode, onAddText, onEditSize, onRotateLabel, onEditLensPower, onEditFeatureAssociation }) {
   const { t } = useI18n();
 
   return (
@@ -16,11 +16,10 @@ export default function LabelToolbar({ isLens, showFeatureAssociation = false, e
         <button className="btn btn-circle btn-info" title={t("editLabelSize")} type="button" onClick={onEditSize}>
           <Icon name="size" />
         </button>
-        {/* {isLens ? (
-          <button className="btn btn-circle btn-info" title={t("editLensPower")} type="button" onClick={onEditLensPower}>
-            <Icon name="lens" />
-          </button>
-        ) : null} */}
+        <button className="btn btn-circle btn-info" title={t("rotateLabel")} type="button" onClick={onRotateLabel}>
+          <Icon name="rotate" />
+        </button>
+        
         {showFeatureAssociation ? (
           <button className="btn btn-circle btn-info" title={t("featureAssociationEdit")} type="button" onClick={onEditFeatureAssociation}>
             <Icon name="link" />

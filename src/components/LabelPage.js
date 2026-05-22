@@ -22,6 +22,7 @@ import {
   createText,
   getDisplayTitleValue,
   normalizeLabel,
+  rotateLabel90,
 } from "@/lib/labelModels";
 import {
   deleteSavedLabel,
@@ -300,6 +301,11 @@ export default function LabelPage({ type }) {
     updateText(selectedTextIndex, {
       rotate: (currentRotate + 90) % 360,
     });
+  };
+
+  const rotateCurrentLabel = () => {
+    setLabel((current) => rotateLabel90(current));
+    setActiveEditor(null);
   };
 
   const saveCurrentLabel = () => {
@@ -601,6 +607,7 @@ export default function LabelPage({ type }) {
             }}
             onAddText={addText}
             onEditSize={() => setSizeOpen(true)}
+            onRotateLabel={rotateCurrentLabel}
             onEditLensPower={() => setLensPowerOpen(true)}
             onEditFeatureAssociation={() => {
               setFeatureAssociationOpen(true);
@@ -620,6 +627,7 @@ export default function LabelPage({ type }) {
                 editText={editText}
                 onSelectQr={() => setActiveEditor("qr")}
                 onSelectBarcode={() => setActiveEditor("barcode")}
+                onBarcodeChange={updateBarcode}
               />
               {activeEditor === "text" && editText ? (
                 <TextEditor
