@@ -1,6 +1,5 @@
 import "./globals.css";
 import Script from "next/script";
-import Providers from "./providers";
 import { organizationJsonLd, pageMetadata, pages, siteUrl } from "@/lib/seo";
 import JsonLd from "@/components/JsonLd";
 
@@ -36,7 +35,7 @@ export default function RootLayout({ children }) {
     <html lang="en" data-theme="light">
       <body>
         <JsonLd data={organizationJsonLd()} />
-        <Providers>{children}</Providers>
+        {children}
         <Script
           defer
           src="https://static.cloudflareinsights.com/beacon.min.js"

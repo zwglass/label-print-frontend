@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
   createCompanyImageUpload,
@@ -14,14 +15,15 @@ import {
   verifyEmailCode,
 } from "@/lib/authApi";
 import { useI18n } from "@/lib/i18n";
+import { localePath, stripLocaleFromPath } from "@/lib/locales";
 
 const userStorageKey = "zwglass-label:user";
 const tokenStorageKey = "zwglass-label:companyToken";
 const navItems = [
-  { href: "/", labelKey: "navCommon" },
-  { href: "/lens/", labelKey: "navLens" },
-  { href: "/guestbook/", labelKey: "navGuestbook" },
-  { href: "/contact/", labelKey: "navHelp" },
+  { path: "/", labelKey: "navCommon" },
+  { path: "/lens/", labelKey: "navLens" },
+  { path: "/guestbook/", labelKey: "navGuestbook" },
+  { path: "/contact/", labelKey: "navHelp" },
 ];
 
 function getInitials(name) {
@@ -59,6 +61,8 @@ function UserAvatar({ user, size = "w-10", textSize = "text-sm", tone = "header"
 
 function SiteShellContent({ children }) {
   const { language, setLanguage, t } = useI18n();
+  const pathname = usePathname();
+  const router = useRouter();
   const [user, setUser] = useState(null);
   const [authOpen, setAuthOpen] = useState(false);
   const [authView, setAuthView] = useState("login");
@@ -430,7 +434,9 @@ function SiteShellContent({ children }) {
 
   const drawerTitle = authView === "register" ? t("registerTitle") : authView === "forgot" ? t("forgotTitle") : t("loginTitle");
   const changeLanguage = (event) => {
-    setLanguage(event.target.value);
+    const nextLanguage = event.target.value;
+    setLanguage(nextLanguage);
+    router.push(localePath(nextLanguage, stripLocaleFromPath(pathname || "/")));
   };
 
   return (
@@ -447,13 +453,13 @@ function SiteShellContent({ children }) {
             </div>
             <ul tabIndex={-1} className="menu menu-sm dropdown-content z-50 mt-3 w-48 rounded-box bg-base-100 p-2 text-base-content shadow">
               {navItems.map((item) => (
-                <li key={item.href}>
-                  <Link href={item.href}>{t(item.labelKey)}</Link>
+                <li key={item.path}>
+                  <Link href={localePath(language, item.path)}>{t(item.labelKey)}</Link>
                 </li>
               ))}
             </ul>
           </div>
-          <Link href="/" className="btn btn-ghost gap-3 px-2 text-primary-content">
+          <Link href={localePath(language, "/")} className="btn btn-ghost gap-3 px-2 text-primary-content">
             <img className="size-10 rounded-full border-2 border-primary-content/70 bg-base-100" src="/favicon-32x32.png" alt="ZWGlass" />
             <span className="hidden font-mono text-xl font-bold sm:inline">ZWGlass</span>
           </Link>
@@ -462,8 +468,8 @@ function SiteShellContent({ children }) {
         <div className="navbar-center hidden lg:flex">
           <ul className="menu menu-horizontal gap-1 px-1 text-lg font-bold">
             {navItems.map((item) => (
-              <li key={item.href}>
-                <Link className="rounded-btn text-primary-content hover:bg-primary-content/15" href={item.href}>{t(item.labelKey)}</Link>
+              <li key={item.path}>
+                <Link className="rounded-btn text-primary-content hover:bg-primary-content/15" href={localePath(language, item.path)}>{t(item.labelKey)}</Link>
               </li>
             ))}
           </ul>

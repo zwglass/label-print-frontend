@@ -3,18 +3,19 @@
 import { useEffect, useMemo, useState } from "react";
 import TwoDimensionalInputTable from "./TwoDimensionalInputTable";
 import { useI18n } from "@/lib/i18n";
+import { getBraceVariableName } from "@/lib/label_templates/generalFuncs";
 
-function getBraceVariableName(value) {
-  const textValue = String(value ?? "");
-  const match = textValue.match(/\{([^{}]+)\}/);
-  if (!match) return "";
+// function getBraceVariableName(value) {
+//   const textValue = String(value ?? "");
+//   const match = textValue.match(/\{([^{}]+)\}/);
+//   if (!match) return "";
 
-  if (textValue.includes(": ")) {
-    return textValue.split(": ")[0].trim();
-  }
+//   if (textValue.includes(": ")) {
+//     return textValue.split(": ")[0].trim();
+//   }
 
-  return match[1].trim();
-}
+//   return match[1].trim();
+// }
 
 function getAssociationTextColumns(texts = []) {
   return texts

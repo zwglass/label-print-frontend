@@ -1,22 +1,8 @@
-import GuestbookContent from "@/components/GuestbookContent";
-import JsonLd from "@/components/JsonLd";
-import SiteShell from "@/components/SiteShell";
-import { breadcrumbJsonLd, pageMetadata, pages } from "@/lib/seo";
+import LocaleRedirect from "@/components/LocaleRedirect";
+import { pageMetadata, pages } from "@/lib/seo";
 
-export const metadata = pageMetadata(pages.guestbook);
+export const metadata = pageMetadata(pages.guestbook, "en");
 
-export default function GuestbookPage() {
-  return (
-    <>
-      <JsonLd
-        data={breadcrumbJsonLd([
-          { name: "Common Labels", path: "/" },
-          { name: "Guestbook", path: "/guestbook/" },
-        ])}
-      />
-      <SiteShell>
-        <GuestbookContent />
-      </SiteShell>
-    </>
-  );
+export default function LegacyGuestbookPage() {
+  return <LocaleRedirect path="/guestbook/" />;
 }

@@ -5,10 +5,10 @@ import QRCode from "qrcode";
 import { useI18n } from "@/lib/i18n";
 import {
   calculateLodopQrCodeVersion,
-  calculateTextWidth,
   textCssStyleCalculate,
   calculateQrcodeTipXy,
 } from "@/lib/labelModels";
+import {calculateTextWidth} from "@/lib/label_templates/generalFuncs";
 
 
 export default function QrCodeView({ qrCode, onSelect }) {

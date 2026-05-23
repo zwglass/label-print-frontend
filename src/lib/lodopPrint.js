@@ -1,5 +1,6 @@
 import { appConfig } from "@/lib/config";
-import { calculateLodopQrCodeVersion, calculateTextWidth, removeVariableBraces, calculateQrcodeTipXy } from "@/lib/labelModels";
+import { calculateLodopQrCodeVersion, calculateQrcodeTipXy } from "@/lib/labelModels";
+import { calculateTextWidth, removeVariableBraces } from "@/lib/label_templates/generalFuncs";
 import QRCode from "qrcode";
 
 let clodopLoadingPromise = null;

@@ -1,50 +1,8 @@
 import QRCode from "qrcode";
 import { formatDateTimeToken, getCurrentDateTimeFormats } from "@/lib/dateTime";
+import defaultLabel, { createText, normalizeTexts, getCommonLabelTextDefinitions, isEnglishLanguage, hasTextValue, textValueTranslations, removeVariableBraces, replaceBraceVariables, calculateTextWidth } from "@/lib/label_templates/generalFuncs";
+import ltCommonBasic from "@/lib/label_templates/ltCommonBasic";
 
-
-export const defaultLabel = {
-    /**
-     * features_data.feature1_association_data 数据结构例子:
-     *      {
-     *         "100000": {"100004": "100", "100005": "1000W", "100006": "1m3/h"},
-     *         "100001": {"100004": "200", "100005": "1200W", "100006": "2m3/h"}, ......
-     *      }
-     *      # 外层 key 是 feature1_data[index].id;
-     *      # 内层 key 是 texts[index].id;
-     *      # feature1_data 和 feature2_data 格式: [{id: "100000", value: "model_100"}, ...]
-     *      # feature1_association_data 的 texts 只能包含 display_title===false && feature_index === 0
-     */
-    name: "LabelPrint",
-    width: 40,
-    height: 70,
-    unit: "mm",
-    texts: [],
-    qrCode: {
-        visible: false,
-        value: "https://label.zwglass.net/",
-        x: 8,
-        y: 8,
-        size: 16,
-        tip: "",
-        tipFontSize: 9,
-    },
-    barcode: {
-        visible: false,
-        value: "123456",
-        type: "CODE128",
-        x: 8,
-        y: 30,
-        width: 36,
-        height: 20,
-        barWidth: 1,
-    },
-    lensPowerRows: [],
-    features_data: {
-        feature1_data: [],      // 批量打印数量二维表格行名称: [{id, value}, ...]
-        feature2_data: [],      // 批量打印数量二维表格列名称: [{id, value}, ...]
-        feature1_association_data: {},    // {feature1_data[index].id: {texts[index].id: string}}
-    },
-};
 
 function cloneLabel(label) {
     return {
@@ -129,186 +87,10 @@ export function calculateLodopQrCodeVersion(value, options = {}) {
     return lodopSupportedQrCodeVersions.find((version) => version >= calculatedVersion) || calculatedVersion;
 }
 
-function hasTextValue(value) {
-    return String(value ?? "").trim().length > 0;
-}
-
-function isChineseCharacter(character) {
-    return /[\u3400-\u9fff\uf900-\ufaff]/u.test(character);
-}
-
-export function calculateTextWidth(value, minWidth = 16) {
-    const width = Array.from(String(value ?? "")).reduce((total, character) => {
-        return total + (isChineseCharacter(character) ? 4 : 2);
-    }, 0);
-
-    return Math.max(width, minWidth);
-}
-
-function isEnglishLanguage(language) {
-    return language === "en";
-}
-
-const textValueTranslations = {
-    "标签名: {显示值}": "Label Name: {Display Value}",
-    "标签名称": "Label Name",
-    "产品名称": "Product Name",
-    "产品名称: 测试商品名": "Product Name: Test Product",
-    "合格证": "Certificate",
-    "型号": "Model",
-    "型号:": "Model:",
-    "型号: {feature1}": "Model: {feature1}",
-    "品牌": "Brand",
-    "品牌:": "Brand:",
-    "品牌: {feature2}": "Brand: {feature2}",
-    "扬程: 30m": "Head: 30m",
-    "扬程: {30m}": "Head: {30m}",
-    "流量: 2m3/h": "Flow: 2m3/h",
-    "流量: {2m3/h}": "Flow: {2m3/h}",
-    "执行标准: GB/T2816": "Standard: GB/T2816",
-    "价格: ¥{188}": "Price: ${188}",
-    "品名:": "Product:",
-    "折射率:": "RI:",
-    "透射比:": "Trans.:",
-    "0类、UV-1": "Cat.0, UV-1",
-    "阿贝数:": "Abbe:",
-    "中心厚度:": "CT:",
-    "直径:": "Dia:",
-    "生产日期:": "MFG Date:",
-    "执行标准:": "Standard:",
-    "产品分类:": "Category:",
-    "眼镜类": "Eyewear",
-    "产品用途:": "Use:",
-    "视力矫正用": "Vision Correction",
-    "镀膜情况:": "Coating:",
-    "多层复合膜": "Multi-layer",
-    "膜色:": "Color:",
-    "绿膜": "Green",
-    "设计:": "Design:",
-    "非球面": "Aspheric",
-    "产地:": "Origin:",
-    "中国 丹阳": "Danyang, China",
-    "等级:": "Grade:",
-    "合格": "Qualified",
-    "1.56超薄树脂防蓝光": "1.56 Ultra-thin Blue Light Blocking Resin Lens",
-};
-
-function translateDefaultTextValue(value, language) {
-    if (!isEnglishLanguage(language)) return value;
-    return textValueTranslations[value] || value;
-}
-
-function getDefaultTextValue(language) {
-    return isEnglishLanguage(language) ? "Label Name: {Display Value}" : "标签名: {显示值}";
-}
-
-const commonLabelTextDefinitions = [{
-        key: "productName",
-        zh: "产品名称: 商品 01",
-        en: "Product Name: Goods 01",
-        row: 2,
-    },
-    {
-        key: "model",
-        zh: "型号: {feature1}",
-        en: "Model: {feature1}",
-        row: 3,
-    },
-    {
-        key: "brand",
-        zh: "品牌: {feature2}",
-        en: "Brand: {feature2}",
-        row: 4,
-    },
-    {
-        key: "certificate",
-        zh: "合格证",
-        en: "Certificate",
-        row: 0,
-        center: true,
-    },
-    {
-        key: "head",
-        zh: "扬程: {30m}",
-        en: "Head: {30m}",
-        row: 5,
-    },
-    {
-        key: "flow",
-        zh: "流量: {2m3/h}",
-        en: "Flow: {2m3/h}",
-        row: 6,
-    },
-    {
-        key: "standard",
-        zh: "执行标准: GB/T2816",
-        en: "Standard: GB/T2816",
-        row: 7,
-    },
-    {
-        key: "date",
-        zh: "日期: {2026-5-15}",
-        en: "Date: {2026-5-15}",
-        row: 8,
-    },
-    {
-        key: "price",
-        zh: "价格: ¥{188}",
-        en: "Price: ${188}",
-        row: 10,
-    },
-];
-
-function getCommonLabelTextDefinitions(language) {
-    const english = isEnglishLanguage(language);
-    return commonLabelTextDefinitions.map((definition) => ({
-        ...definition,
-        value: english ? definition.en : definition.zh,
-    }));
-}
-
 export function getDisplayTitleValue(label, fallbackTitle = "LabelPrint") {
     const titleText = label?.texts?.find((text) => text.display_title);
     const value = titleText?.value;
     return hasTextValue(value) ? String(value).trim() : String(fallbackTitle || "LabelPrint").trim();
-}
-
-export function normalizeTexts(texts, fallbackTitle = "LabelPrint", options = {}) {
-    const language = options.language || "zh";
-    const titleFallbackSource = hasTextValue(fallbackTitle) ? String(fallbackTitle).trim() : "LabelPrint";
-    const titleFallback = translateDefaultTextValue(titleFallbackSource, language);
-    const sourceTexts = Array.isArray(texts) && texts.length ?
-        texts :
-        [{
-            value: titleFallback,
-            x: 6,
-            y: 5,
-            width: 40,
-            fontSize: 8,
-            bold: false,
-            rotate: 0
-        }];
-    let titleIndex = sourceTexts.findIndex((text) => text.display_title && hasTextValue(text.value));
-    if (titleIndex < 0) titleIndex = sourceTexts.findIndex((text) => hasTextValue(text.value));
-    if (titleIndex < 0) titleIndex = 0;
-
-    const usedIds = new Set();
-
-    return sourceTexts.map((text, index) => {
-        const rawId = text.id === undefined || text.id === null ? "" : String(text.id).trim();
-        const sourceId = !rawId || usedIds.has(rawId) ?
-            createNextSixDigitId(usedIds) :
-            rawId;
-        usedIds.add(sourceId);
-
-        return {
-            ...text,
-            id: sourceId,
-            rotate: text.rotate ?? 0,
-            value: index === titleIndex && !hasTextValue(text.value) ? titleFallback : translateDefaultTextValue(text.value, language),
-            display_title: index === titleIndex,
-        };
-    });
 }
 
 export function createDiopterValues(maxValue = 12) {
@@ -340,17 +122,6 @@ export function findLensPowerRow(label, sph) {
 function getAssociatedTextKey(textValue) {
     const match = String(textValue ?? "").match(/^([^:：]+)\s*[:：]\s*(.*)$/);
     return match ? match[1].trim() : "";
-}
-
-function replaceBraceVariables(textValue, getVariableValue) {
-    return String(textValue ?? "").replace(/\{([^{}]+)\}/g, (match, name) => {
-        const value = getVariableValue(String(name).trim());
-        return value === undefined || value === null ? name : String(value);
-    });
-}
-
-export function removeVariableBraces(textValue) {
-    return replaceBraceVariables(textValue, () => undefined);
 }
 
 export function updateAssociatedTextValue(text, associationValues) {
@@ -459,18 +230,32 @@ export function updateCommonBatchLabel(label, feature1, feature2) {
     return {
         ...label,
         texts: (label.texts || []).map((text) => {
-            if (Number(text.feature_index || 0) === 1) return {
-                ...text,
-                value: removeVariableBraces(updateFeatureTextValue(text.value, feature1Item.value))
-            };
-            if (Number(text.feature_index || 0) === 2) return {
-                ...text,
-                value: removeVariableBraces(updateFeatureTextValue(text.value, feature2Item.value))
-            };
-            if (associationValues && text.association === true && !text.display_title && Number(text.feature_index || 0) === 0) {
+            
+            if (Number(text.feature_index || 0) === 1) {
+                const currentValue = removeVariableBraces(updateFeatureTextValue(text.value, feature1Item.value));
+                const textMinWidth = calculateTextWidth(currentValue);
                 return {
                     ...text,
-                    value: removeVariableBraces(updateAssociatedTextValue(text, associationValues))
+                    width: Math.max(Number(text.width) || 0, textMinWidth),
+                    value: currentValue,
+                };
+            }
+            if (Number(text.feature_index || 0) === 2) {
+                const currentValue = removeVariableBraces(updateFeatureTextValue(text.value, feature2Item.value));
+                const textMinWidth = calculateTextWidth(currentValue);
+                return {
+                    ...text,
+                    width: Math.max(Number(text.width) || 0, textMinWidth),
+                    value: currentValue,
+                };
+            }
+            if (associationValues && text.association === true && !text.display_title && Number(text.feature_index || 0) === 0) {
+                const currentValue = removeVariableBraces(updateAssociatedTextValue(text, associationValues));
+                const textMinWidth = calculateTextWidth(currentValue);
+                return {
+                    ...text,
+                    width: Math.max(Number(text.width) || 0, textMinWidth),
+                    value: currentValue,
                 };
             }
             return {
@@ -489,18 +274,31 @@ export function updateLensBatchLabel(label, feature1, feature2, sign) {
     return {
         ...label,
         texts: (label.texts || []).map((text) => {
-            if (Number(text.feature_index || 0) === 1) return {
-                ...text,
-                value: removeVariableBraces(updateFeatureTextValue(text.value, `${sign.sph}${feature1Item.value}`))
-            };
-            if (Number(text.feature_index || 0) === 2) return {
-                ...text,
-                value: removeVariableBraces(updateFeatureTextValue(text.value, `${sign.cyl}${feature2Item.value}`))
-            };
-            if (associationValues && text.association === true && !text.display_title && Number(text.feature_index || 0) === 0) {
+            if (Number(text.feature_index || 0) === 1) {
+                const currentValue = removeVariableBraces(updateFeatureTextValue(text.value, `${sign.sph}${feature1Item.value}`));
+                const textMinWidth = calculateTextWidth(currentValue);
                 return {
                     ...text,
-                    value: removeVariableBraces(updateAssociatedTextValue(text, associationValues))
+                    width: Math.max(Number(text.width) || 0, textMinWidth),
+                    value: currentValue,
+                };
+            }
+            if (Number(text.feature_index || 0) === 2) {
+                const currentValue = removeVariableBraces(updateFeatureTextValue(text.value, `${sign.cyl}${feature2Item.value}`));
+                const textMinWidth = calculateTextWidth(currentValue);
+                return {
+                    ...text,
+                    width: Math.max(Number(text.width) || 0, textMinWidth),
+                    value: currentValue,
+                };
+            }
+            if (associationValues && text.association === true && !text.display_title && Number(text.feature_index || 0) === 0) {
+                const currentValue = removeVariableBraces(updateAssociatedTextValue(text, associationValues));
+                const textMinWidth = calculateTextWidth(currentValue);
+                return {
+                    ...text,
+                    width: Math.max(Number(text.width) || 0, textMinWidth),
+                    value: currentValue,
                 };
             }
             return {
@@ -724,37 +522,7 @@ function createLensFeaturesData(label, options = {}) {
 }
 
 export function createCommonTemplateLabel(options = {}) {
-    const language = options.language || "zh";
-    const label = {
-        ...defaultLabel,
-        name: "LabelPrint",
-        qrCode: {
-            visible: false,
-            value: "https://label.zwglass.net/",
-            x: 28,
-            y: 5,
-            size: 16,
-            tip: "",
-            tipFontSize: 9,
-        },
-        barcode: {
-            visible: false,
-            value: "123456",
-            type: "CODE128",
-            x: 30,
-            y: 5,
-            width: 36,
-            height: 20,
-            barWidth: 2,
-        },
-    };
-
-    return {
-        ...label,
-        texts: newLabelTexts(label, {
-            language
-        }),
-    };
+    return ltCommonBasic(options);
 }
 
 export function createLensLabel(options = {}) {
@@ -790,21 +558,9 @@ export function createLensLabel(options = {}) {
     return newLensLabel;
 }
 
-function normalizeFeatureIndex(value, fallback = 0) {
-    const index = Number(value ?? fallback);
-    return index === 1 || index === 2 ? index : 0;
-}
-
 function normalizeNumber(value, fallback = 0) {
     const numberValue = Number(value);
     return Number.isFinite(numberValue) ? numberValue : fallback;
-}
-
-function normalizeBoolean(value, fallback = false) {
-    if (typeof value === "boolean") return value;
-    if (value === "true") return true;
-    if (value === "false") return false;
-    return fallback;
 }
 
 function normalizeRotate(value) {
@@ -842,36 +598,6 @@ export function rotateLabel90(label) {
         texts: (label.texts || []).map((text) => rotateItem90Clockwise(text, height)),
         qrCode: rotateItem90Clockwise(label.qrCode, height),
         barcode: rotateItem90Clockwise(label.barcode, height),
-    };
-}
-
-export function createText(label, value, isNewLabel=false, options = {}, specifiedParam = {}) {
-    const textValue = value ?? getDefaultTextValue(options.language);
-    let displayTitle = specifiedParam.display_title ?? false
-    let featureIndex = normalizeFeatureIndex(specifiedParam.feature_index)
-    const textsLength = label.texts.length
-    const existingIds = new Set((label.texts || []).map((text) => String(text.id ?? "")).filter(Boolean));
-    if (isNewLabel) {
-        displayTitle = specifiedParam.display_title ?? textsLength === 0
-        featureIndex = normalizeFeatureIndex(
-            specifiedParam.feature_index,
-            textsLength === 1 ? 1 : textsLength === 2 ? 2 : 0
-        )
-    }
-    const defaultY = Math.min(8 + textsLength * 4, Math.max(label.height - 8, 2));
-    return {
-        id: specifiedParam.id ?? createNextSixDigitId(existingIds),
-        value: textValue,                       // 变量使用 {} 包裹; 变量名称不能有重复, 不能有空格; 没有 {} association==true 也不替换
-        display_title: displayTitle,            // 只有新建标签时第一个文本能赋值 true, 其余都是 false
-        feature_index: featureIndex,           // 只有新建标签时第二、三个文本才能赋值 1 和 2, 其余都赋值为 0
-        x: normalizeNumber(specifiedParam.x, 2),
-        y: normalizeNumber(specifiedParam.y, defaultY),
-        width: normalizeNumber(specifiedParam.width, calculateTextWidth(textValue)),
-        fontSize: normalizeNumber(specifiedParam.fontSize, 8),
-        bold: normalizeBoolean(specifiedParam.bold, false),
-        rotate: normalizeNumber(specifiedParam.rotate, 0),
-        association: normalizeBoolean(specifiedParam.association, false),               // 是否是 feature1 的关联数据; 为 true 替换 value 中的变量
-        association_name: specifiedParam.association_name ?? "",                        // 关联二维表 column 标题
     };
 }
 

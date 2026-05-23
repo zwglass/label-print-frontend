@@ -19,11 +19,11 @@ import { Icon } from "./icons";
 import {
   createCommonTemplateLabel,
   createLensLabel,
-  createText,
   getDisplayTitleValue,
   normalizeLabel,
   rotateLabel90,
 } from "@/lib/labelModels";
+import { createText } from "@/lib/label_templates/generalFuncs";
 import {
   deleteSavedLabel,
   downloadLabel,

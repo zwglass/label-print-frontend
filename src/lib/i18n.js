@@ -1,12 +1,9 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { defaultLanguage, normalizeLanguage } from "@/lib/locales";
 
 const languageStorageKey = "zwglass-label:language";
-
-function normalizeLanguage(language) {
-  return language === "en" ? "en" : "zh";
-}
 
 const dictionaries = {
   zh: {
@@ -498,19 +495,12 @@ const LanguageContext = createContext({
   },
 });
 
-export function LanguageProvider({ children }) {
-  const [language, setLanguageState] = useState("en");
+export function LanguageProvider({ children, initialLanguage = defaultLanguage }) {
+  const [language, setLanguageState] = useState(() => normalizeLanguage(initialLanguage));
 
   useEffect(() => {
-    try {
-      const savedLanguage = window.localStorage.getItem(languageStorageKey);
-      if (savedLanguage === "zh" || savedLanguage === "en") {
-        setLanguageState(savedLanguage);
-      }
-    } catch {
-      setLanguageState("en");
-    }
-  }, []);
+    setLanguageState(normalizeLanguage(initialLanguage));
+  }, [initialLanguage]);
 
   const setLanguage = (nextLanguage) => {
     const normalized = normalizeLanguage(nextLanguage);
