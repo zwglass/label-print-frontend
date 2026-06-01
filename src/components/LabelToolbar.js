@@ -69,9 +69,6 @@ export default function LabelToolbar({
             </select>
           </label>
           <label className="flex min-h-12 items-center justify-between gap-4 rounded border border-base-300 px-4 font-semibold md:col-span-1">
-          
-          {/* <label className="form-control"> */}
-
             <span className="label-text font-semibold">{t("labelRounded")}</span>
             <input className="checkbox checkbox-info" type="checkbox" checked={Boolean(printLayout.rounded)} onChange={(event) => onPrintLayoutChange?.({ rounded: event.target.checked })} />
           </label>
