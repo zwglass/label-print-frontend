@@ -1,5 +1,5 @@
 import { appConfig } from "@/lib/config";
-import { calculateLodopQrCodeVersion, calculateQrcodeTipXy } from "@/lib/labelModels";
+import { calculateLodopQrCodeVersion, calculatePrintLayout, calculateQrcodeTipXy, normalizePrintLayout } from "@/lib/labelModels";
 import { calculateTextWidth, removeVariableBraces } from "@/lib/label_templates/generalFuncs";
 import QRCode from "qrcode";
 
@@ -197,14 +197,16 @@ function setLodopTextStyle(lodop, text) {
   lodop.SET_PRINT_STYLE("Angle", -(Number(text.rotate) || 0));
 }
 
-function addLodopText(lodop, text) {
+function addLodopText(lodop, text, offset = {}) {
   const fontSize = Number(text.fontSize) || 9;
   const height = Math.max(fontSize * 0.5, 4);
+  const offsetX = numberValue(offset.x, 0);
+  const offsetY = numberValue(offset.y, 0);
 
   setLodopTextStyle(lodop, text);
   lodop.ADD_PRINT_TEXT(
-    mm(text.y, 0),
-    mm(text.x, 0),
+    mm(numberValue(text.y, 0) + offsetY, 0),
+    mm(numberValue(text.x, 0) + offsetX, 0),
     mm(text.width, 20),
     mm(height, 4),
     removeVariableBraces(text.value)
@@ -214,15 +216,17 @@ function addLodopText(lodop, text) {
   }
 }
 
-function addLodopQrCode(lodop, qrCode) {
+function addLodopQrCode(lodop, qrCode, offset = {}) {
   if (!qrCode?.visible) return;
 
   const rotate = normalizeAngle(qrCode.rotate);
   const qrSize = numberValue(qrCode.size, 14);
+  const offsetX = numberValue(offset.x, 0);
+  const offsetY = numberValue(offset.y, 0);
   const qrCodeVersion = calculateLodopQrCodeVersion(qrCode.value);
   const box = getLodopQrCodeBox({
-    x: qrCode.x,
-    y: qrCode.y,
+    x: numberValue(qrCode.x, 0) + offsetX,
+    y: numberValue(qrCode.y, 0) + offsetY,
     size: qrSize,
     rotate,
   });
@@ -253,19 +257,21 @@ function addLodopQrCode(lodop, qrCode) {
       bold: false,
       rotate,
       align: "center",
-    });
+    }, { x: offsetX, y: offsetY });
   }
 }
 
-function addLodopBarcode(lodop, barcode) {
+function addLodopBarcode(lodop, barcode, offset = {}) {
   if (!barcode?.visible) return;
 
   const rotate = normalizeAngle(barcode.rotate);
   const barcodeWidth = numberValue(barcode.width, 30);
   const barcodeHeight = numberValue(barcode.height, 20);
+  const offsetX = numberValue(offset.x, 0);
+  const offsetY = numberValue(offset.y, 0);
   const box = getCssRotatedBox({
-    x: barcode.x,
-    y: barcode.y,
+    x: numberValue(barcode.x, 0) + offsetX,
+    y: numberValue(barcode.y, 0) + offsetY,
     width: barcodeWidth,
     height: barcodeHeight,
     rotate,
@@ -286,16 +292,49 @@ function addLodopBarcode(lodop, barcode) {
   lodop.SET_PRINT_STYLEA(0, "Angle", -rotate);
 }
 
+function addLabelToLodop(lodop, label, offset = {}) {
+  (label.texts || []).forEach((text) => addLodopText(lodop, text, offset));
+  addLodopQrCode(lodop, label.qrCode, offset);
+  addLodopBarcode(lodop, label.barcode, offset);
+}
+
 function prepareLabelPrint(lodop, label, printerIndex, copies = 1) {
   lodop.PRINT_INIT(label.name || "");
   lodop.SET_PRINT_PAGESIZE(1, mm(label.width, 80), mm(label.height, 50), "CreateCustomPage");
 
-  label.texts.forEach((text) => addLodopText(lodop, text));
-  addLodopQrCode(lodop, label.qrCode);
-  addLodopBarcode(lodop, label.barcode);
+  addLabelToLodop(lodop, label);
 
   lodop.SET_PRINTER_INDEX(Number(printerIndex) || 0);
   lodop.SET_PRINT_COPIES(Math.max(Number(copies) || 1, 1));
+}
+
+function preparePrintLayoutSheet(lodop, labels, printLayout, printerIndex) {
+  const sheetLabels = Array.isArray(labels) ? labels.slice(0) : [];
+  const firstLabel = sheetLabels.find(Boolean);
+  const layout = normalizePrintLayout(printLayout);
+  const calculatedLayout = firstLabel ? calculatePrintLayout(firstLabel, layout) : { ...layout, rows: 0, columns: 0, capacity: 0 };
+  const columns = Number(calculatedLayout.columns) || 0;
+  const capacity = Number(calculatedLayout.capacity) || 0;
+
+  if (!firstLabel || columns < 1 || capacity < 1) {
+    throw new Error("印刷纸张排版无效，请检查纸张、边距、间距和标签尺寸。");
+  }
+
+  lodop.PRINT_INIT(firstLabel.name || "");
+  lodop.SET_PRINT_PAGESIZE(1, mm(calculatedLayout.paperWidth, 210), mm(calculatedLayout.paperHeight, 297), "CreateCustomPage");
+
+  sheetLabels.slice(0, capacity).forEach((label, index) => {
+    if (!label) return;
+
+    const row = Math.floor(index / columns);
+    const column = index % columns;
+    const offsetX = calculatedLayout.marginLeft + column * (numberValue(label.width, 0) + calculatedLayout.columnGap);
+    const offsetY = calculatedLayout.marginTop + row * (numberValue(label.height, 0) + calculatedLayout.rowGap);
+    addLabelToLodop(lodop, label, { x: offsetX, y: offsetY });
+  });
+
+  lodop.SET_PRINTER_INDEX(Number(printerIndex) || 0);
+  lodop.SET_PRINT_COPIES(1);
 }
 
 function isLodopReturnSuccess(value) {
@@ -351,8 +390,33 @@ export function sendLabelToLodop(lodop, label, printerIndex, mode = "print", cop
   }
 }
 
+export function sendPrintLayoutToLodop(lodop, labels, printLayout, printerIndex, mode = "print") {
+  preparePrintLayoutSheet(lodop, labels, printLayout, printerIndex);
+
+  if (mode === "preview") {
+    lodop.PREVIEW();
+  } else {
+    lodop.PRINT();
+  }
+}
+
 export async function sendLabelToLodopAsync(lodop, label, printerIndex, mode = "print", copies = 1) {
   prepareLabelPrint(lodop, label, printerIndex, copies);
+
+  const ok = await runLodopCommandAsync(lodop, () => {
+    if (mode === "preview") return lodop.PREVIEW();
+    return lodop.PRINT();
+  });
+
+  if (!ok) {
+    throw new Error("C-Lodop print command failed.");
+  }
+
+  return ok;
+}
+
+export async function sendPrintLayoutToLodopAsync(lodop, labels, printLayout, printerIndex, mode = "print") {
+  preparePrintLayoutSheet(lodop, labels, printLayout, printerIndex);
 
   const ok = await runLodopCommandAsync(lodop, () => {
     if (mode === "preview") return lodop.PREVIEW();

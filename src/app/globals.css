@@ -56,6 +56,48 @@ body {
   background: rgba(22, 136, 255, 0.08);
 }
 
+.print-layout-preview {
+  position: relative;
+  flex: 0 0 auto;
+  max-width: calc(100vw - 48px);
+  overflow: auto;
+  border: 1px solid #7c7c7c;
+  border-radius: 6px;
+  background:
+    linear-gradient(#f1f5f9 1px, transparent 1px),
+    linear-gradient(90deg, #f1f5f9 1px, transparent 1px),
+    #fff;
+  background-size: 10mm 10mm;
+}
+
+.print-layout-label-cell {
+  position: absolute;
+  border: 1px solid #7c7c7c;
+  background: #f8fafc;
+  cursor: pointer;
+}
+
+.print-layout-label-cell.selected {
+  outline: 2px solid #1688ff;
+  outline-offset: -2px;
+}
+
+.print-layout-label-cell > .label-preview {
+  width: 100% !important;
+  height: 100% !important;
+  border: 0;
+  border-radius: inherit;
+  background: inherit;
+}
+
+.print-layout-label-cell.rounded {
+  border-radius: 6px;
+}
+
+.print-layout-label-cell.square {
+  border-radius: 0;
+}
+
 .label-qrcode {
   position: absolute;
   cursor: pointer;

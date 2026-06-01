@@ -10,6 +10,7 @@ function cloneLabel(label) {
         texts: (label.texts || []).map((text) => ({ ...text })),
         qrCode: { ...(label.qrCode || {}) },
         barcode: { ...(label.barcode || {}) },
+        printLayout: { ...(label.printLayout || {}) },
         lensPowerRows: (label.lensPowerRows || []).map((row) => ({ ...row })),
         features_data: {
             ...(label.features_data || {}),
@@ -601,6 +602,104 @@ export function rotateLabel90(label) {
     };
 }
 
+export const defaultPrintLayout = {
+    enabled: false,
+    paperWidth: 210,
+    paperHeight: 297,
+    marginTop: 10,
+    marginLeft: 10,
+    rowGap: 2,
+    columnGap: 2,
+    rounded: true,
+    labelOrientation: "normal",
+    rows: 0,
+    columns: 0,
+    startIndex: 0,
+};
+
+const printLayoutOrientations = new Set(["normal", "rotated90", "auto"]);
+
+function normalizePrintLayoutNumber(value, fallback = 0, min = 0) {
+    const numberValue = Number(value);
+    if (!Number.isFinite(numberValue)) return fallback;
+    return Math.max(numberValue, min);
+}
+
+export function normalizePrintLayout(input = {}) {
+    const source = input && typeof input === "object" ? input : {};
+    const labelOrientation = printLayoutOrientations.has(source.labelOrientation) ?
+        source.labelOrientation :
+        defaultPrintLayout.labelOrientation;
+
+    return {
+        ...defaultPrintLayout,
+        ...source,
+        enabled: Boolean(source.enabled),
+        paperWidth: normalizePrintLayoutNumber(source.paperWidth, defaultPrintLayout.paperWidth, 1),
+        paperHeight: normalizePrintLayoutNumber(source.paperHeight, defaultPrintLayout.paperHeight, 1),
+        marginTop: normalizePrintLayoutNumber(source.marginTop, defaultPrintLayout.marginTop, 0),
+        marginLeft: normalizePrintLayoutNumber(source.marginLeft, defaultPrintLayout.marginLeft, 0),
+        rowGap: normalizePrintLayoutNumber(source.rowGap, defaultPrintLayout.rowGap, 0),
+        columnGap: normalizePrintLayoutNumber(source.columnGap, defaultPrintLayout.columnGap, 0),
+        rounded: source.rounded === undefined ? defaultPrintLayout.rounded : Boolean(source.rounded),
+        labelOrientation,
+        rows: Math.floor(normalizePrintLayoutNumber(source.rows, defaultPrintLayout.rows, 0)),
+        columns: Math.floor(normalizePrintLayoutNumber(source.columns, defaultPrintLayout.columns, 0)),
+        startIndex: Math.floor(normalizePrintLayoutNumber(source.startIndex, defaultPrintLayout.startIndex, 0)),
+    };
+}
+
+export function calculatePrintLayout(label, printLayout = {}) {
+    const layout = normalizePrintLayout(printLayout);
+    const labelWidth = normalizePrintLayoutNumber(label?.width, 0, 0);
+    const labelHeight = normalizePrintLayoutNumber(label?.height, 0, 0);
+    const usableWidth = Math.max(layout.paperWidth - layout.marginLeft, 0);
+    const usableHeight = Math.max(layout.paperHeight - layout.marginTop, 0);
+    const columns = labelWidth > 0 ?
+        Math.floor((usableWidth + layout.columnGap) / (labelWidth + layout.columnGap)) :
+        0;
+    const rows = labelHeight > 0 ?
+        Math.floor((usableHeight + layout.rowGap) / (labelHeight + layout.rowGap)) :
+        0;
+
+    return {
+        ...layout,
+        rows: Math.max(rows, 0),
+        columns: Math.max(columns, 0),
+        capacity: Math.max(rows, 0) * Math.max(columns, 0),
+    };
+}
+
+export function resolvePrintableLabel(label, printLayout = {}) {
+    const layout = normalizePrintLayout(printLayout);
+    if (layout.labelOrientation === "rotated90") {
+        return rotateLabel90(label);
+    }
+
+    if (layout.labelOrientation === "auto") {
+        const normalLayout = calculatePrintLayout(label, { ...layout, labelOrientation: "normal" });
+        const rotatedLabel = rotateLabel90(label);
+        const rotatedLayout = calculatePrintLayout(rotatedLabel, { ...layout, labelOrientation: "rotated90" });
+        return rotatedLayout.capacity > normalLayout.capacity ? rotatedLabel : label;
+    }
+
+    return label;
+}
+
+export function resolvePrintableLayout(label, printLayout = {}) {
+    const layout = normalizePrintLayout(printLayout);
+    const printableLabel = resolvePrintableLabel(label, layout);
+    const calculatedLayout = calculatePrintLayout(printableLabel, layout);
+
+    return {
+        label: printableLabel,
+        printLayout: calculatedLayout,
+        rows: calculatedLayout.rows,
+        columns: calculatedLayout.columns,
+        capacity: calculatedLayout.capacity,
+    };
+}
+
 export function normalizeLabel(input, fallback, options = {}) {
     if (!input || typeof input !== "object") return fallback;
     // const fallbackTitle = getDisplayTitleValue(input, input.name || fallback.name || "LabelPrint");
@@ -627,6 +726,7 @@ export function normalizeLabel(input, fallback, options = {}) {
             ...fallback.barcode,
             ...(input.barcode || {}),
         },
+        printLayout: normalizePrintLayout(input.printLayout || fallback.printLayout),
         lensPowerRows: Array.isArray(input.lensPowerRows) ? input.lensPowerRows : fallback.lensPowerRows,
         features_data: {
             ...fallback.features_data,

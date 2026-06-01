@@ -1,6 +1,6 @@
 import BarcodeView from "./BarcodeView";
 import QrCodeView from "./QrCodeView";
-import { textCssStyleCalculate } from "@/lib/labelModels";
+import { resolvePrintableLayout, textCssStyleCalculate } from "@/lib/labelModels";
 
 function isVariableText(text) {
   return text?.association === true || Number(text?.feature_index || 0) > 0;
@@ -57,6 +57,49 @@ export default function LabelPreview({
       ))}
       {label.qrCode.visible && <QrCodeView qrCode={label.qrCode} onSelect={onSelectQr} />}
       {label.barcode.visible && <BarcodeView barcode={label.barcode} onSelect={onSelectBarcode} onChange={onBarcodeChange} />}
+    </div>
+  );
+}
+
+export function PrintLayoutPreview({ label, printLayout, startIndex = 0, onStartIndexChange = () => {} }) {
+  const result = resolvePrintableLayout(label, printLayout);
+  const layout = result.printLayout;
+  const capacity = Math.max(Number(result.capacity) || 0, 0);
+  const previewCount = capacity;
+  const labels = Array.from({ length: previewCount }, (_, index) => index);
+  const selectedStartIndex = capacity > 0 ? Math.min(Math.max(Math.floor(Number(startIndex) || 0), 0), capacity - 1) : 0;
+
+  return (
+    <div
+      className="print-layout-preview"
+      style={{ width: `${layout.paperWidth}mm`, height: `${layout.paperHeight}mm` }}
+    >
+      {labels.map((index) => {
+        const row = Math.floor(index / layout.columns);
+        const column = index % layout.columns;
+        const left = layout.marginLeft + column * (Number(result.label.width) + layout.columnGap);
+        const top = layout.marginTop + row * (Number(result.label.height) + layout.rowGap);
+
+        return (
+          <div
+            className={[
+              "print-layout-label-cell",
+              layout.rounded ? "rounded" : "square",
+              index === selectedStartIndex ? "selected" : "",
+            ].filter(Boolean).join(" ")}
+            key={index}
+            onClick={() => onStartIndexChange(index)}
+            style={{
+              left: `${left}mm`,
+              top: `${top}mm`,
+              width: `${result.label.width}mm`,
+              height: `${result.label.height}mm`,
+            }}
+          >
+            {index === selectedStartIndex ? <LabelPreview label={result.label} /> : null}
+          </div>
+        );
+      })}
     </div>
   );
 }

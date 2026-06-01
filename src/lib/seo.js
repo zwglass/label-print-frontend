@@ -13,9 +13,17 @@ const openGraphLocales = {
 
 export const seoKeywords = [
   "free online label printer",
+  "free online label printer batch",
+  "browser label editor no installation",
+  "custom QR code label maker free",
+  "batch print barcode labels online",
+  "label template export json",
   "online label printer",
   "free label printing software",
   "label design software alternative",
+  "Avery alternative",
+  "BarTender alternative",
+  "CSV barcode label printing",
   "barcode label printer",
   "QR code label printer",
   "browser-based label printing",
@@ -36,14 +44,74 @@ export const pages = {
     path: "/",
     locales: {
       en: {
-        title: "Free Online Label Printer | ZWGlass Label Print",
+        title: "Free Online Label Printer for Batch Printing | ZWGlass",
         description:
-          "Create and print labels in your browser for free. ZWGlass Label Print supports barcode labels, QR code labels, eyeglass lens labels, JSON template export, browser printing, and LODOP/C-Lodop local printer integration.",
+          "Edit, customize & batch-print 100~5000 labels instantly in browser. No install, 100% free. Supports QR, barcode, JSON templates, and browser printing.",
       },
       zh: {
-        title: "免费在线标签打印工具 | ZWGlass Label Print",
+        title: "免费在线批量标签打印工具 | ZWGlass",
         description:
-          "在浏览器中免费创建和打印标签。ZWGlass Label Print 支持二维码标签、条形码标签、眼镜片标签、JSON 模板导出、浏览器打印和 LODOP/C-Lodop 本地打印机集成。",
+          "在浏览器中免费编辑、自定义并批量打印 100~5000 张标签，无需安装。支持二维码、条形码、JSON 模板和浏览器打印。",
+      },
+    },
+  },
+  browserEditor: {
+    path: "/browser-label-editor-no-installation/",
+    locales: {
+      en: {
+        title: "Browser Label Editor with No Installation | Works on Mac/Win/Linux",
+        description:
+          "Skip Avery & BarTender. Design & print labels directly in Chrome/Safari. Auto-saves to browser and works across Mac, Windows, and Linux.",
+      },
+      zh: {
+        title: "免安装浏览器标签编辑器 | Mac/Win/Linux 可用",
+        description:
+          "无需下载桌面标签软件，直接在 Chrome/Safari 中设计和打印标签。模板自动保存到浏览器，支持 Mac、Windows 和 Linux。",
+      },
+    },
+  },
+  qrLabelMaker: {
+    path: "/custom-qr-code-label-maker/",
+    locales: {
+      en: {
+        title: "Free Custom QR Code Label Maker | Design, Resize & Print Online",
+        description:
+          "Generate scannable QR labels for products, WiFi, invoices. Adjust size, border, error correction, label text, and print online free forever.",
+      },
+      zh: {
+        title: "免费自定义二维码标签生成器 | 在线设计、调整和打印",
+        description:
+          "为商品、WiFi、发票和活动生成可扫描二维码标签。可调整尺寸、边距、容错、文字和打印版式，永久免费。",
+      },
+    },
+  },
+  barcodeBatch: {
+    path: "/batch-print-barcode-labels/",
+    locales: {
+      en: {
+        title: "Batch Print Barcode Labels Online | CSV Import & Instant Print",
+        description:
+          "Upload Excel/CSV data to auto-generate Code128, EAN, and UPC labels. Set margins, run a test print, and batch output in browser.",
+      },
+      zh: {
+        title: "在线批量打印条形码标签 | CSV 导入并即时打印",
+        description:
+          "导入 Excel/CSV 数据后自动生成 Code128、EAN、UPC 标签。可设置边距、测试打印，并在浏览器中批量输出。",
+      },
+    },
+  },
+  jsonTemplates: {
+    path: "/label-template-json/",
+    locales: {
+      en: {
+        title: "Export & Import Label Templates as JSON | Automate Your Workflow",
+        description:
+          "Save custom layouts, share with team, and backup settings. Open JSON structure for reusable templates, CI/CD prep, or future API workflows.",
+      },
+      zh: {
+        title: "标签模板 JSON 导入导出 | 自动化复用标签工作流",
+        description:
+          "保存自定义版式、团队共享模板并备份设置。开放 JSON 结构，适合模板复用、自动化和未来 API 工作流。",
       },
     },
   },

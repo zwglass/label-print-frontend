@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import TwoDimensionalInputTable, { getTwoDimensionalInputData, getValidationResult } from "./TwoDimensionalInputTable";
-import { getReadyLodop, sendLabelToLodopAsync } from "@/lib/lodopPrint";
+import { getReadyLodop, sendLabelToLodopAsync, sendPrintLayoutToLodopAsync } from "@/lib/lodopPrint";
 import { useI18n } from "@/lib/i18n";
-import { updateCommonBatchLabel } from "@/lib/labelModels";
+import { resolvePrintableLayout, updateCommonBatchLabel } from "@/lib/labelModels";
 
 function isQuantityValueValid(value) {
   if (value === "") return true;
@@ -87,7 +87,28 @@ function removeColumnValues(values = {}, columnId) {
   );
 }
 
-export default function CommonBatchPrintDialog({ open, label, printerIndex = 0, onClose, onSave, onPrint, onNotify = () => {} }) {
+function paginateLabels(labels, pageSize) {
+  const size = Math.max(Number(pageSize) || 0, 0);
+  if (!Array.isArray(labels) || size < 1) return [];
+
+  const pages = [];
+  for (let index = 0; index < labels.length; index += size) {
+    pages.push(labels.slice(index, index + size));
+  }
+  return pages;
+}
+
+function prependPrintStartBlanks(labels, startIndex, capacity) {
+  const safeStartIndex = Math.min(Math.max(Math.floor(Number(startIndex) || 0), 0), Math.max(Number(capacity) || 0, 1) - 1);
+  if (safeStartIndex < 1) return labels;
+
+  return [
+    ...Array.from({ length: safeStartIndex }, () => null),
+    ...labels,
+  ];
+}
+
+export default function CommonBatchPrintDialog({ open, label, printLayout, printerIndex = 0, onClose, onSave, onPrint, onNotify = () => {} }) {
   const { language, t } = useI18n();
   const [rows, setRows] = useState([]);
   const [columns, setColumns] = useState([]);
@@ -232,8 +253,31 @@ export default function CommonBatchPrintDialog({ open, label, printerIndex = 0, 
     setPrinting(true);
     try {
       const lodop = await getReadyLodop();
-      for (const job of jobs) {
-        await sendLabelToLodopAsync(lodop, job.label, printerIndex, "print", job.count);
+      if (printLayout?.enabled) {
+        const printableLabels = [];
+        let sheetLayout = null;
+        let capacity = 0;
+
+        for (const job of jobs) {
+          const result = resolvePrintableLayout(job.label, printLayout);
+          if (result.capacity < 1) {
+            onNotify(t("printLayoutInvalid"), "warning");
+            return;
+          }
+          sheetLayout = sheetLayout || result.printLayout;
+          capacity = capacity || result.capacity;
+          for (let index = 0; index < job.count; index += 1) {
+            printableLabels.push(result.label);
+          }
+        }
+
+        for (const sheetLabels of paginateLabels(prependPrintStartBlanks(printableLabels, sheetLayout?.startIndex, capacity), capacity)) {
+          await sendPrintLayoutToLodopAsync(lodop, sheetLabels, sheetLayout, printerIndex, "print");
+        }
+      } else {
+        for (const job of jobs) {
+          await sendLabelToLodopAsync(lodop, job.label, printerIndex, "print", job.count);
+        }
       }
       onPrint({
         rows,

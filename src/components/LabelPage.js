@@ -1,9 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import SiteShell from "./SiteShell";
 import PrinterSelect from "./PrinterSelect";
-import LabelPreview from "./LabelPreview";
+import LabelPreview, { PrintLayoutPreview } from "./LabelPreview";
 import LabelToolbar from "./LabelToolbar";
 import BarcodeEditor from "./BarcodeEditor";
 import LensBatchPrintDialog from "./LensBatchPrintDialog";
@@ -21,6 +22,8 @@ import {
   createLensLabel,
   getDisplayTitleValue,
   normalizeLabel,
+  normalizePrintLayout,
+  resolvePrintableLayout,
   rotateLabel90,
 } from "@/lib/labelModels";
 import { createText } from "@/lib/label_templates/generalFuncs";
@@ -32,20 +35,23 @@ import {
   loadSavedLabelByKey,
   saveLabel,
 } from "@/lib/storage";
-import { getReadyLodop, sendLabelToLodop } from "@/lib/lodopPrint";
+import { getReadyLodop, sendLabelToLodop, sendPrintLayoutToLodop } from "@/lib/lodopPrint";
 import { useI18n } from "@/lib/i18n";
+import { localePath } from "@/lib/locales";
 
 const seoCopy = {
   zh: {
     common: {
-      heading: "免费在线标签打印工具",
+      heading: "免费在线批量标签打印工具",
       intro:
-        "ZWGlass Label Print 可在浏览器中创建通用标签，适合商品贴标、仓储标签、二维码标签、条形码标签和小批量办公标签打印。",
+        "ZWGlass Label Print 可在浏览器中创建、编辑并批量打印标签，适合商品贴标、仓储标签、二维码标签、条形码标签和办公标签打印。",
       points: [
-        "支持编辑文本、字号、加粗、旋转、二维码、条形码和标签尺寸。",
+        "首屏可直接设置打印份数并打开打印预览，适合 100~5000 张标签的批量输出。",
         "模板保存在浏览器本地，并可导出 JSON 文件用于备份和迁移。",
-        "可使用浏览器打印预览；安装 LODOP/C-Lodop 后可读取本地打印机并直接打印。",
+        "无需安装桌面标签软件；可使用浏览器打印预览，或通过 LODOP/C-Lodop 直连本地打印机。",
       ],
+      steps: ["选择或新建标签模板。", "编辑文本、二维码、条形码、尺寸和打印份数。", "先预览测试，再批量打印。"],
+      relatedTitle: "更多标签打印场景",
       faqs: [
         {
           question: "如何在线打印自定义标签？",
@@ -82,12 +88,14 @@ const seoCopy = {
     common: {
       heading: "Free online label printing tool",
       intro:
-        "ZWGlass Label Print creates browser-based labels for product labeling, warehouse labels, QR code labels, barcode labels, and small office print runs.",
+        "ZWGlass Label Print creates, edits, and batch-prints labels in the browser for product labeling, warehouse labels, QR code labels, barcode labels, and office print runs.",
       points: [
-        "Edit text, font size, bold style, rotation, QR codes, barcodes, and label dimensions.",
+        "Set quantity and open print preview from the first screen for 100~5000 label batch output.",
         "Templates are saved in browser storage and can be exported as JSON backups.",
-        "Use browser print preview, or install LODOP/C-Lodop to read local printers and print directly.",
+        "No desktop label software required; use browser preview or LODOP/C-Lodop for direct local printer access.",
       ],
+      steps: ["Choose or create a label template.", "Edit text, QR code, barcode, size, and print quantity.", "Run a test preview, then batch print."],
+      relatedTitle: "More label printing workflows",
       faqs: [
         {
           question: "How do I print a custom label online?",
@@ -124,6 +132,24 @@ const seoCopy = {
 
 function SeoAnswerContent({ type, language }) {
   const copy = (seoCopy[language] || seoCopy.zh)[type === "lens" ? "lens" : "common"];
+  const related = [
+    {
+      path: "/browser-label-editor-no-installation/",
+      label: language === "zh" ? "免安装浏览器标签编辑器" : "Browser label editor with no installation",
+    },
+    {
+      path: "/custom-qr-code-label-maker/",
+      label: language === "zh" ? "免费自定义二维码标签生成器" : "Free custom QR code label maker",
+    },
+    {
+      path: "/batch-print-barcode-labels/",
+      label: language === "zh" ? "在线批量打印条形码标签" : "Batch print barcode labels online",
+    },
+    {
+      path: "/label-template-json/",
+      label: language === "zh" ? "标签模板 JSON 导入导出" : "Export and import label templates as JSON",
+    },
+  ];
 
   return (
     <section className="mt-16 border-t border-base-300 pt-10 text-left text-base-content">
@@ -136,6 +162,30 @@ function SeoAnswerContent({ type, language }) {
           </li>
         ))}
       </ul>
+      {type === "common" ? (
+        <>
+          <div className="mt-8 rounded border border-primary/30 bg-primary/5 p-5">
+            <h3 className="text-lg font-bold">{language === "zh" ? "3 步完成批量打印" : "Batch print in 3 steps"}</h3>
+            <ol className="mt-4 grid gap-3 leading-7 text-base-content/80 md:grid-cols-3">
+              {copy.steps.map((step, index) => (
+                <li className="rounded bg-base-100 p-4" key={step}>
+                  <b>{index + 1}.</b> {step}
+                </li>
+              ))}
+            </ol>
+          </div>
+          <div className="mt-8">
+            <h3 className="text-lg font-bold">{copy.relatedTitle}</h3>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              {related.map((item) => (
+                <Link className="rounded border border-base-300 bg-base-100 p-4 font-semibold text-primary hover:border-primary" href={localePath(language, item.path)} key={item.path}>
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+        </>
+      ) : null}
       <div className="mt-8 grid gap-4 md:grid-cols-2">
         {copy.faqs.map((item) => (
           <article className="rounded border border-base-300 bg-base-100 p-4" key={item.question}>
@@ -146,6 +196,27 @@ function SeoAnswerContent({ type, language }) {
       </div>
     </section>
   );
+}
+
+function paginateLabels(labels, pageSize) {
+  const size = Math.max(Number(pageSize) || 0, 0);
+  if (!Array.isArray(labels) || size < 1) return [];
+
+  const pages = [];
+  for (let index = 0; index < labels.length; index += size) {
+    pages.push(labels.slice(index, index + size));
+  }
+  return pages;
+}
+
+function prependPrintStartBlanks(labels, startIndex, capacity) {
+  const safeStartIndex = Math.min(Math.max(Math.floor(Number(startIndex) || 0), 0), Math.max(Number(capacity) || 0, 1) - 1);
+  if (safeStartIndex < 1) return labels;
+
+  return [
+    ...Array.from({ length: safeStartIndex }, () => null),
+    ...labels,
+  ];
 }
 
 export default function LabelPage({ type }) {
@@ -213,6 +284,8 @@ export default function LabelPage({ type }) {
   }, [activeEditor, label.width, label.height]);
 
   const title = type === "lens" ? t("lensLabelTitle") : t("commonLabelTitle");
+  const printLayout = normalizePrintLayout(label.printLayout);
+  const printLayoutResult = resolvePrintableLayout(label, printLayout);
 
   const notify = (text, noticeType = "info") => {
     setNotice({ text, type: noticeType, id: Date.now() });
@@ -220,6 +293,43 @@ export default function LabelPage({ type }) {
 
   const updateLabel = (patch) => {
     setLabel((current) => ({ ...current, ...patch }));
+  };
+
+  const updatePrintLayout = (patch) => {
+    setLabel((current) => ({
+      ...current,
+      printLayout: normalizePrintLayout({
+        ...(current.printLayout || {}),
+        ...patch,
+      }),
+    }));
+    if (patch.enabled) {
+      setEditText(false);
+      setActiveEditor(null);
+    }
+  };
+
+  const resetPrintLayoutStartIndex = () => {
+    updatePrintLayout({ startIndex: 0 });
+  };
+
+  const autoArrangePrintLayout = () => {
+    const normalizedLabel = normalizeLabel(label, fallback);
+    const result = resolvePrintableLayout(normalizedLabel, normalizedLabel.printLayout);
+    if (result.capacity < 1) {
+      notify(t("printLayoutInvalid"), "warning");
+      return;
+    }
+
+    setLabel((current) => ({
+      ...current,
+      printLayout: normalizePrintLayout({
+        ...(current.printLayout || {}),
+        rows: result.rows,
+        columns: result.columns,
+      }),
+    }));
+    notify(t("printLayoutResult", result.rows, result.columns, result.capacity), "success");
   };
 
   const updateText = (index, patch) => {
@@ -393,7 +503,29 @@ export default function LabelPage({ type }) {
 
     try {
       const lodop = await getReadyLodop();
-      sendLabelToLodop(lodop, normalizedLabel, printerIndex, printMode, printCount);
+      if (normalizedLabel.printLayout?.enabled) {
+        const result = resolvePrintableLayout(normalizedLabel, normalizedLabel.printLayout);
+        if (result.capacity < 1) {
+          notify(t("printLayoutInvalid"), "warning");
+          return;
+        }
+
+        const labelCount = Math.max(Number(printCount) || 1, 1);
+        const printableLabels = prependPrintStartBlanks(
+          Array.from({ length: labelCount }, () => result.label),
+          result.printLayout.startIndex,
+          result.capacity
+        );
+        const sheets = paginateLabels(printableLabels, result.capacity);
+        for (const sheetLabels of sheets) {
+          sendPrintLayoutToLodop(lodop, sheetLabels, result.printLayout, printerIndex, printMode);
+        }
+      } else {
+        sendLabelToLodop(lodop, normalizedLabel, printerIndex, printMode, printCount);
+      }
+      if (normalizedLabel.printLayout?.enabled) {
+        resetPrintLayoutStartIndex();
+      }
       notify(printMode === "preview" ? t("lodopPreviewOpened") : t("printQueued", printCount), "success");
     } catch (error) {
       notify(error.message || t("lodopPrintFail"), "error");
@@ -410,6 +542,7 @@ export default function LabelPage({ type }) {
 
     setLensBatchOpen(false);
     setBatchPrintLabels([]);
+    resetPrintLayoutStartIndex();
     notify(t("batchPrintQueued", jobCount, totalCount), "success");
   };
 
@@ -434,6 +567,7 @@ export default function LabelPage({ type }) {
 
     setCommonBatchOpen(false);
     setBatchPrintLabels([]);
+    resetPrintLayoutStartIndex();
     notify(t("commonBatchPrintQueued", jobCount, totalCount), "success");
   };
 
@@ -583,7 +717,12 @@ export default function LabelPage({ type }) {
             isLens={type === "lens"}
             showFeatureAssociation={true}
             editText={editText}
+            printLayout={printLayout}
+            printLayoutResult={printLayoutResult}
+            onPrintLayoutChange={updatePrintLayout}
+            onAutoArrangePrintLayout={autoArrangePrintLayout}
             onToggleEdit={(checked) => {
+              if (printLayout.enabled) return;
               setEditText(checked);
               setActiveEditor(checked && selectedTextIndex >= 0 ? "text" : null);
             }}
@@ -616,20 +755,29 @@ export default function LabelPage({ type }) {
 
           <div className="flex items-start justify-center">
             <div ref={stageRef} className="label-editor-stage">
-              <LabelPreview
-                label={label}
-                selectedIndex={selectedTextIndex}
-                onSelect={(index) => {
-                  setSelectedTextIndex(index);
-                  if (editText) setActiveEditor("text");
-                }}
-                onTextChange={updateText}
-                editText={editText}
-                onSelectQr={() => setActiveEditor("qr")}
-                onSelectBarcode={() => setActiveEditor("barcode")}
-                onBarcodeChange={updateBarcode}
-              />
-              {activeEditor === "text" && editText ? (
+              {printLayout.enabled ? (
+                <PrintLayoutPreview
+                  label={label}
+                  printLayout={printLayout}
+                  startIndex={printLayout.startIndex}
+                  onStartIndexChange={(index) => updatePrintLayout({ startIndex: index })}
+                />
+              ) : (
+                <LabelPreview
+                  label={label}
+                  selectedIndex={selectedTextIndex}
+                  onSelect={(index) => {
+                    setSelectedTextIndex(index);
+                    if (editText) setActiveEditor("text");
+                  }}
+                  onTextChange={updateText}
+                  editText={editText}
+                  onSelectQr={() => setActiveEditor("qr")}
+                  onSelectBarcode={() => setActiveEditor("barcode")}
+                  onBarcodeChange={updateBarcode}
+                />
+              )}
+              {!printLayout.enabled && activeEditor === "text" && editText ? (
                 <TextEditor
                   text={label.texts[selectedTextIndex]}
                   onChange={(patch) => updateText(selectedTextIndex, patch)}
@@ -641,7 +789,7 @@ export default function LabelPage({ type }) {
                   onMeasure={setEditorSize}
                 />
               ) : null}
-              {activeEditor === "qr" && label.qrCode.visible ? (
+              {!printLayout.enabled && activeEditor === "qr" && label.qrCode.visible ? (
                 <QrCodeEditor
                   qrCode={label.qrCode}
                   onChange={updateQrCode}
@@ -651,7 +799,7 @@ export default function LabelPage({ type }) {
                   onMeasure={setEditorSize}
                 />
               ) : null}
-              {activeEditor === "barcode" && label.barcode.visible ? (
+              {!printLayout.enabled && activeEditor === "barcode" && label.barcode.visible ? (
                 <BarcodeEditor
                   barcode={label.barcode}
                   onChange={updateBarcode}
@@ -716,6 +864,7 @@ export default function LabelPage({ type }) {
       <LensBatchPrintDialog
         open={lensBatchOpen}
         label={label}
+        printLayout={printLayout}
         printerIndex={printerIndex}
         onClose={() => setLensBatchOpen(false)}
         onPrint={printLensBatch}
@@ -724,6 +873,7 @@ export default function LabelPage({ type }) {
       <CommonBatchPrintDialog
         open={type === "common" && commonBatchOpen}
         label={label}
+        printLayout={printLayout}
         printerIndex={printerIndex}
         onClose={() => setCommonBatchOpen(false)}
         onSave={saveCommonBatchRowsAndColumns}
